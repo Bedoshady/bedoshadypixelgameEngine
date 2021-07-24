@@ -64,13 +64,13 @@ public:
 
 	void display() {
 		
-	//	glViewport(0, 0, m_width, m_height);
+		glViewport(0, 0, m_width, m_height);
 		 
-		//glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT);
 	
 		for (int i = 0; i < m_height; i++) {
 			for (int j = 0; j < m_width; j++) {
-				DrawPixel(j, i, rand()%256, rand() % 256, rand() % 256);
+			//	DrawPixel(j, i, 255,  255, 255);
 				
 				//pixel h;
 				//h.SetRGB(255,0,255);
