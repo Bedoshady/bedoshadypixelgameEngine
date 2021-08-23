@@ -27,7 +27,7 @@ private:
 
 	struct vec3d {
 		float x = 0, y = 0, z = 0;
-		
+		float w = 1;
 
 	};
 	struct vec2d {
@@ -125,7 +125,7 @@ private:
 					if (line[1] == 't')
 					{
 						vec2d v;
-						s >> junk >> junk >> v.u >> v.v;
+						s >> junk >> junk >> v.v >> v.u;
 						// A little hack for the spyro texture
 						//v.u = 1.0f - v.u;
 						//v.v = 1.0f - v.v;
@@ -274,9 +274,9 @@ private:
 			tri2.tex[1] = *insideTexPoints[1];
 		
 			tri2.p[2] = IntersectPointWithPlane(planePoint, planeNor, *insidePoints[1], *outsidePoints[0],t);
-			tri2.tex[2].u = (*insideTexPoints[0]).u + ((*outsideTexPoints[0]).u - (*insideTexPoints[1]).u) * t;
-			tri2.tex[2].v = (*insideTexPoints[0]).v + ((*outsideTexPoints[0]).v - (*insideTexPoints[1]).v) * t;
-			tri2.tex[2].w = (*insideTexPoints[0]).w + ((*outsideTexPoints[0]).w - (*insideTexPoints[1]).w) * t;
+			tri2.tex[2].u = (*insideTexPoints[1]).u + ((*outsideTexPoints[0]).u - (*insideTexPoints[1]).u) * t;
+			tri2.tex[2].v = (*insideTexPoints[1]).v + ((*outsideTexPoints[0]).v - (*insideTexPoints[1]).v) * t;
+			tri2.tex[2].w = (*insideTexPoints[1]).w + ((*outsideTexPoints[0]).w - (*insideTexPoints[1]).w) * t;
 
 
 			tri3.p[0] = *insidePoints[0];
@@ -287,9 +287,9 @@ private:
 
 			tri3.p[2] = IntersectPointWithPlane(planePoint, planeNor, *insidePoints[0], *outsidePoints[0],t);
 
-			tri3.tex[2].u = (*insideTexPoints[1]).u + ((*outsideTexPoints[0]).u - (*insideTexPoints[0]).u) * t;
-			tri3.tex[2].v = (*insideTexPoints[1]).v + ((*outsideTexPoints[0]).v - (*insideTexPoints[0]).v) * t;
-			tri3.tex[2].w = (*insideTexPoints[1]).w + ((*outsideTexPoints[0]).w - (*insideTexPoints[0]).w) * t;
+			tri3.tex[2].u = (*insideTexPoints[0]).u + ((*outsideTexPoints[0]).u - (*insideTexPoints[0]).u) * t;
+			tri3.tex[2].v = (*insideTexPoints[0]).v + ((*outsideTexPoints[0]).v - (*insideTexPoints[0]).v) * t;
+			tri3.tex[2].w = (*insideTexPoints[0]).w + ((*outsideTexPoints[0]).w - (*insideTexPoints[0]).w) * t;
 
 			return 2;
 
@@ -314,161 +314,162 @@ public:
 		vec3d lookPos = { 0,0,1 };
 		Matrix cam;
 protected:
-	//void DrawTexturedTriangle(sprite spr, int x1, int y1, float u1, float v1, float z1, 
-	//									   int x2, int y2, float u2, float v2, float z2,
-	//									   int x3, int y3, float u3, float v3, float z3)
-	//{
-	//	//sort according to y
-	//	if (y2 < y1) {
-	//		std::swap(y1, y2);
-	//		std::swap(x1, x2);
+	void DrawTexturedTriangle(sprite spr, int x1, int y1, float u1, float v1, float z1, 
+										   int x2, int y2, float u2, float v2, float z2,
+										   int x3, int y3, float u3, float v3, float z3)
+	{
+		//sort according to y
+		if (y2 < y1) {
+			std::swap(y1, y2);
+			std::swap(x1, x2);
 
 
-	//		std::swap(u1, u2);
-	//		std::swap(v1, v2);
-	//		std::swap(z1, z2);
+			std::swap(u1, u2);
+			std::swap(v1, v2);
+			std::swap(z1, z2);
 
 
-	//	}
-	//	if (y3 < y1) {
-	//		std::swap(y1, y3);
-	//		std::swap(x1, x3);
-	//
-	//		std::swap(u1, u3);
-	//		std::swap(v1, v3);
-	//		std::swap(z1, z3);
-	//	}
-	//	if (y3 < y2) {
-	//		std::swap(y3, y2);
-	//		std::swap(x3, x2);
+		}
+		if (y3 < y1) {
+			std::swap(y1, y3);
+			std::swap(x1, x3);
+	
+			std::swap(u1, u3);
+			std::swap(v1, v3);
+			std::swap(z1, z3);
+		}
+		if (y3 < y2) {
+			std::swap(y3, y2);
+			std::swap(x3, x2);
 
-	//		std::swap(u3, u2);
-	//		std::swap(v3, v2);
-	//		std::swap(z3, z2);
-	//	}
+			std::swap(u3, u2);
+			std::swap(v3, v2);
+			std::swap(z3, z2);
+		}
 
-	//	int dx1 = x2 - x1;
-	//	int dx2 = x3 - x1;
+		int dx1 = x2 - x1;
+		int dx2 = x3 - x1;
 
-	//	float du1 = u2 - u1;
-	//	float du2 = u3 - u1;
+		float du1 = u2 - u1;
+		float du2 = u3 - u1;
 
-	//	float dv1 = v2 - v1;
-	//	float dv2 = v3 - v1;
-	//	
-	//	float dz1 = z2 - z1;
-	//	float dz2 = z3 - z1;
+		float dv1 = v2 - v1;
+		float dv2 = v3 - v1;
+		
+		float dz1 = z2 - z1;
+		float dz2 = z3 - z1;
 
-	//	float slopePix1 = 0, slopePix2 = 0;
-	//	
-	//	float slopeTexu1 = 0, slopeTexu2 = 0;
-	//	float slopeTexv1 = 0, slopeTexv2 = 0;
-	//	float slopeTexz1 = 0, slopeTexz2 = 0;
+		float slopePix1 = 0, slopePix2 = 0;
+		
+		float slopeTexu1 = 0, slopeTexu2 = 0;
+		float slopeTexv1 = 0, slopeTexv2 = 0;
+		float slopeTexz1 = 0, slopeTexz2 = 0;
 
-	//	if (y2 != y1) {
-	//		slopePix1  = (float)dx1 / (float)(y2 - y1);
-	//		slopeTexu1 = (float)du1 / (float)(y2 - y1);
-	//		slopeTexv1 = (float)dv1 / (float)(y2 - y1);
-	//		slopeTexz1 = (float)dz1 / (float)(y2 - y1);
+		if (y2 != y1) {
+			slopePix1  = (float)dx1 / (float)(y2 - y1);
+			slopeTexu1 = (float)du1 / (float)(y2 - y1);
+			slopeTexv1 = (float)dv1 / (float)(y2 - y1);
+			slopeTexz1 = (float)dz1 / (float)(y2 - y1);
 
-	//	}
-	//	if (y3 != y1) {
-	//		slopePix2  = (float)dx2 / (float)(y3 - y1);
-	//		slopeTexu2 = (float)du2 / (float)(y3 - y1);
-	//		slopeTexv2 = (float)dv2 / (float)(y3 - y1);
-	//		slopeTexz2 = (float)dz2 / (float)(y3 - y1);
+		}
+		if (y3 != y1) {
+			slopePix2  = (float)dx2 / (float)(y3 - y1);
+			slopeTexu2 = (float)du2 / (float)(y3 - y1);
+			slopeTexv2 = (float)dv2 / (float)(y3 - y1);
+			slopeTexz2 = (float)dz2 / (float)(y3 - y1);
 
-	//	}
-	//	if (y1 < y2) {
-	//		for (int i = y1; i < y2; i++) {
-	//			int sx = x1 + (float)(i - y1) * slopePix1;
-	//			int ex = x1 + (float)(i - y1) * slopePix2;
-	//		
-	//			float tex_u1 = u1 + (float)(i - y1) * slopeTexu1;
-	//			float tex_u2 = u1 + (float)(i - y1) * slopeTexu2;
-	//			
-	//			float tex_v1 = v1 + (float)(i - y1) * slopeTexv1;
-	//			float tex_v2 = v1 + (float)(i - y1) * slopeTexv2;
+		}
+		if (y1 < y2) {
+			for (int i = y1; i < y2; i++) {
+				int sx = x1 + (float)(i - y1) * slopePix1;
+				int ex = x1 + (float)(i - y1) * slopePix2;
+			
+				float tex_u1 = u1 + (float)(i - y1) * slopeTexu1;
+				float tex_u2 = u1 + (float)(i - y1) * slopeTexu2;
+				
+				float tex_v1 = v1 + (float)(i - y1) * slopeTexv1;
+				float tex_v2 = v1 + (float)(i - y1) * slopeTexv2;
 
-	//			float tex_z1 = z1 + (float)(i - y1) * slopeTexz1;
-	//			float tex_z2 = z1 + (float)(i - y1) * slopeTexz2;
+				float tex_z1 = z1 + (float)(i - y1) * slopeTexz1;
+				float tex_z2 = z1 + (float)(i - y1) * slopeTexz2;
 
-	//			if (ex < sx) {
-	//				std::swap(sx, ex);
-	//				std::swap(tex_u1, tex_u2);
-	//				std::swap(tex_v1, tex_v2);
-	//				std::swap(tex_z1, tex_z2);
-
-
-
-	//			}
-	//				for (int j = sx; j < ex; j++) {
-	//					float t = (float)(j - sx) / (float)(ex - sx);
-	//					float ju1 = tex_u1 + t * (tex_u2 - tex_u1);
-	//					float jv1 = tex_v1 + t * (tex_v2 - tex_v1);
-	//					float jz1 = tex_z1 + t * (tex_z2 - tex_z1);
-	//					ju1 /= jz1;
-	//					jv1 /= jz1;
-	//					DrawPixel(j, i, spr.GetSamplePixel(ju1, jv1));//spr.GetSampleGlyph(ju1,jv1), spr.GetSampleColor(ju1,jv1));
-	//			     }
-	//		
-	//		}
-
-
-	//	}
-	//	du1 = u3 - u2;
-	//	dv1 = v3 - v2;
-	//	dz1 = z3 - z2;
-	//	if (y3 != y2) {
-	//		slopePix1 = (float)(x3 - x2) / (float)(y3 - y2);
-	//		slopeTexu1 = (float)du1 / (float)(y3 - y2);
-	//		slopeTexv1 = (float)dv1 / (float)(y3 - y2);
-	//		slopeTexz1 = (float)dz1 / (float)(y3 - y2);
-
-	//	
-	//	}
-	//		if (y2 < y3) {
-	//		for (int i = y2; i < y3; i++) {
-	//			int sx = x2 + (float)(i - y2) * slopePix1;
-	//			int ex = x1 + (float)(i - y1) * slopePix2;
-
-	//			float tex_u1 = u2 + (float)(i - y2) * slopeTexu1;
-	//			float tex_u2 = u1 + (float)(i - y1) * slopeTexu2;
-
-	//			float tex_v1 = v2 + (float)(i - y2) * slopeTexv1;
-	//			float tex_v2 = v1 + (float)(i - y1) * slopeTexv2;
-
-	//			float tex_z1 = z2 + (float)(i - y2) * slopeTexz1;
-	//			float tex_z2 = z1 + (float)(i - y1) * slopeTexz2;
-
-	//			if (ex < sx) {
-	//				std::swap(sx, ex);
-	//				std::swap(tex_u1, tex_u2);
-	//				std::swap(tex_v1, tex_v2);
-	//				std::swap(tex_z1, tex_z2);
+				if (ex < sx) {
+					std::swap(sx, ex);
+					std::swap(tex_u1, tex_u2);
+					std::swap(tex_v1, tex_v2);
+					std::swap(tex_z1, tex_z2);
 
 
 
-	//			}
-	//			for (int j = sx; j < ex; j++) {
-	//				float t = (float)(j - sx) / (float)(ex - sx);
-	//				float ju1 = tex_u1 + t * (tex_u2 - tex_u1);
-	//				float jv1 = tex_v1 + t * (tex_v2 - tex_v1);
-	//				float jz1 = tex_z1 + t * (tex_z2 - tex_z1);
-	//				ju1 /= jz1;
-	//				jv1 /= jz1;
-	//				DrawPixel(j, i, spr.GetSamplePixel(ju1, jv1));//spr.GetSampleGlyph(ju1, jv1), spr.GetSampleColor(ju1, jv1));
-	//			}
+				}
+					for (int j = sx; j < ex; j++) {
+						float t = (float)(j - sx) / (float)(ex - sx);
+						float ju1 = tex_u1 + t * (tex_u2 - tex_u1);
+						float jv1 = tex_v1 + t * (tex_v2 - tex_v1);
+						float jz1 = tex_z1 + t * (tex_z2 - tex_z1);
+						ju1 /= jz1;
+						jv1 /= jz1;
+						DrawPixel(j, i, spr.GetSamplePixel(ju1, jv1));//spr.GetSampleGlyph(ju1,jv1), spr.GetSampleColor(ju1,jv1));
+				     }
+			
+			}
 
-	//		}
+
+		}
+		du1 = u3 - u2;
+		dv1 = v3 - v2;
+		dz1 = z3 - z2;
+		if (y3 != y2) {
+			slopePix1 = (float)(x3 - x2) / (float)(y3 - y2);
+			slopeTexu1 = (float)du1 / (float)(y3 - y2);
+			slopeTexv1 = (float)dv1 / (float)(y3 - y2);
+			slopeTexz1 = (float)dz1 / (float)(y3 - y2);
+
+		
+		}
+			if (y2 < y3) {
+			for (int i = y2; i < y3; i++) {
+				int sx = x2 + (float)(i - y2) * slopePix1;
+				int ex = x1 + (float)(i - y1) * slopePix2;
+
+				float tex_u1 = u2 + (float)(i - y2) * slopeTexu1;
+				float tex_u2 = u1 + (float)(i - y1) * slopeTexu2;
+
+				float tex_v1 = v2 + (float)(i - y2) * slopeTexv1;
+				float tex_v2 = v1 + (float)(i - y1) * slopeTexv2;
+
+				float tex_z1 = z2 + (float)(i - y2) * slopeTexz1;
+				float tex_z2 = z1 + (float)(i - y1) * slopeTexz2;
+
+				if (ex < sx) {
+					std::swap(sx, ex);
+					std::swap(tex_u1, tex_u2);
+					std::swap(tex_v1, tex_v2);
+					std::swap(tex_z1, tex_z2);
 
 
-	//	}
-	//}
+
+				}
+				for (int j = sx; j < ex; j++) {
+					float t = (float)(j - sx) / (float)(ex - sx);
+					float ju1 = tex_u1 + t * (tex_u2 - tex_u1);
+					float jv1 = tex_v1 + t * (tex_v2 - tex_v1);
+					float jz1 = tex_z1 + t * (tex_z2 - tex_z1);
+					ju1 /= jz1;
+					jv1 /= jz1;
+					DrawPixel(j, i, spr.GetSamplePixel(ju1, jv1));//spr.GetSampleGlyph(ju1, jv1), spr.GetSampleColor(ju1, jv1));
+				}
+
+			}
+
+
+		}
+	}
+	sprite spr;
 	bool OnUserCreate() {
 		a = (float)ScreenHeight() / (float)ScreenWidth();
-		std::string filename = "C:\\dev\\test\\utah tea pot.obj";
-		if(!LoadFromObjectFile(filename, false))return false;
+		std::string filename = "C:\\dev\\test\\test\\hub.obj";
+		if (!LoadFromObjectFile(filename, true)) { std::cout << "error"; return false; }
 
 		Projection.i[0] = 1 * fRad * a;
 		Projection.i[1] = 0;
@@ -487,75 +488,53 @@ protected:
 		Projection.k[2] = (float)Zfar / (float)(Zfar - Znear);
 		Projection.k[3] = 1.0f;
 
-
+			
 		Projection.w[0] = 0;
 		Projection.w[1] = 0;
 		Projection.w[2] = -(float)Znear * Zfar / (Zfar - Znear);
 		Projection.w[3] = 0;
 
 
-		meshCube.tris = {
+		// meshCube.tris = {
 
-			// SOUTH
-			{ 0.0f, 0.0f, 0.0f,    0.0f, 1.0f, 0.0f,	1.0f, 1.0f, 0.0f, 
-			  0.0f, 0.0f, 0.0f,    0.0f, 1.0f, 0.0f,	1.0f, 1.0f, 0.0f},
+		//// SOUTH
+		//{ 0.0f, 0.0f, 0.0f,1,    0.0f, 1.0f, 0.0f,1,    1.0f, 1.0f, 0.0f,1,   1,0,1, 1,1,1, 0,1,1},
+		//{ 0.0f, 0.0f, 0.0f,1,    1.0f, 1.0f, 0.0f,1,    1.0f, 0.0f, 0.0f,1,   1,0,1, 0,1,1, 0,0,1},
+		//				   
+		//// EAST            
+		//{ 1.0f, 0.0f, 0.0f,1,    1.0f, 1.0f, 0.0f,1,    1.0f, 1.0f, 1.0f,1,   1,0,1, 1,1,1, 0,1,1 },
+		//{ 1.0f, 0.0f, 0.0f,1,    1.0f, 1.0f, 1.0f,1,    1.0f, 0.0f, 1.0f,1,   1,0,1, 0,1,1, 0,0,1 },
+		//				  
+		//// NORTH           
+		//{ 1.0f, 0.0f, 1.0f,1,    1.0f, 1.0f, 1.0f,1,    0.0f, 1.0f, 1.0f,1,   1,0,1, 1,1,1, 0,1,1 },
+		//{ 1.0f, 0.0f, 1.0f,1,    0.0f, 1.0f, 1.0f,1,    0.0f, 0.0f, 1.0f,1,   1,0,1, 0,1,1, 0,0,1 },
+		//				  
+		//// WEST            
+		//{ 0.0f, 0.0f, 1.0f,1,    0.0f, 1.0f, 1.0f,1,    0.0f, 1.0f, 0.0f,1,   1,0,1, 1,1,1, 0,1,1 },
+		//{ 0.0f, 0.0f, 1.0f,1,    0.0f, 1.0f, 0.0f,1,    0.0f, 0.0f, 0.0f,1,   1,0,1, 0,1,1, 0,0,1 },
+		//				  
+		//// TOP             
+		//{ 0.0f, 1.0f, 0.0f,1,    0.0f, 1.0f, 1.0f,1,    1.0f, 1.0f, 1.0f,1,   1,0,1, 1,1,1, 0,1,1},
+		//{ 0.0f, 1.0f, 0.0f,1,    1.0f, 1.0f, 1.0f,1,    1.0f, 1.0f, 0.0f,1,   1,0,1, 0,1,1, 0,0,1},
 
-			{ 0.0f, 0.0f, 0.0f,    1.0f, 1.0f, 0.0f,	1.0f, 0.0f, 0.0f,  
-			  0.0f, 0.0f, 0.0f,    1.0f, 1.0f, 0.0f,	1.0f, 0.0f, 0.0f},
+		//// BOTTOM                                                    
+		//{ 1.0f, 0.0f, 1.0f,1,    0.0f, 0.0f, 1.0f,1,    0.0f, 0.0f, 0.0f,1,   1,0,1, 1,1,1, 0,1,1 },
+		//{ 1.0f, 0.0f, 1.0f,1,    0.0f, 0.0f, 0.0f,1,    1.0f, 0.0f, 0.0f,1,   1,0,1, 0,1,1, 0,0,1 },
 
-			// EAST                                                      
-			{ 1.0f, 0.0f, 0.0f,    1.0f, 1.0f, 0.0f,	1.0f, 1.0f, 1.0f,
-			  0.0f, 0.0f, 0.0f,    0.0f, 1.0f, 0.0f,	1.0f, 1.0f, 0.0f},
-
-			{ 1.0f, 0.0f, 0.0f,	   1.0f, 1.0f, 1.0f,	1.0f, 0.0f, 1.0f,
-			  0.0f, 0.0f, 0.0f,    1.0f, 1.0f, 0.0f,	1.0f, 0.0f, 0.0f},
-
-			// NORTH                                                     
-			{ 1.0f, 0.0f, 1.0f,    1.0f, 1.0f, 1.0f,    0.0f, 1.0f, 1.0f,
-			  0.0f, 0.0f, 0.0f,    0.0f, 1.0f, 0.0f,	1.0f, 1.0f, 0.0f},
-
-			{ 1.0f, 0.0f, 1.0f,    0.0f, 1.0f, 1.0f,    0.0f, 0.0f, 1.0f,
-			  0.0f, 0.0f, 0.0f,    1.0f, 1.0f, 0.0f,	1.0f, 0.0f, 0.0f},
-
-			// WEST                                                      
-			{ 0.0f, 0.0f, 1.0f,   0.0f, 1.0f, 1.0f,    0.0f, 1.0f, 0.0f,
-			  0.0f, 0.0f, 0.0f,    0.0f, 1.0f, 0.0f,	1.0f, 1.0f, 0.0f},
-
-			{ 0.0f, 0.0f, 1.0f,   0.0f, 1.0f, 0.0f,    0.0f, 0.0f, 0.0f,
-			  0.0f, 0.0f, 0.0f,    1.0f, 1.0f, 0.0f,	1.0f, 0.0f, 0.0f},
-							  
-			// TOP                                
-			{ 0.0f, 1.0f, 0.0f,   0.0f, 1.0f, 1.0f,    1.0f, 1.0f, 1.0f,
-			  0.0f, 0.0f, 0.0f,    0.0f, 1.0f, 0.0f,	1.0f, 1.0f, 0.0f},
-
-			{ 0.0f, 1.0f, 0.0f,   1.0f, 1.0f, 1.0f,    1.0f, 1.0f, 0.0f,
-			  0.0f, 0.0f, 0.0f,    1.0f, 1.0f, 0.0f,	1.0f, 0.0f, 0.0f},
-							  
-			// BOTTOM                             
-			{ 1.0f, 0.0f, 1.0f,   0.0f, 0.0f, 1.0f,    0.0f, 0.0f, 0.0f,
-			  0.0f, 0.0f, 0.0f,    0.0f, 1.0f, 0.0f,	1.0f, 1.0f, 0.0f},
-			
-			{ 1.0f, 0.0f, 1.0f,   0.0f, 0.0f, 0.0f,    1.0f, 0.0f, 0.0f,
-			  0.0f, 0.0f, 0.0f,    1.0f, 1.0f, 0.0f,	1.0f, 0.0f, 0.0f},
-							  
-		};
+		//};
 		yaw = 0;
-		//bool x = spr.LoadImage("C:\\dev\\test\\test\\spyro.png");
-	//	if (x == false)
-		//	std::cout << "error";
+		bool x = spr.LoadImage("C:\\dev\\test\\test\\high.png");
+		if (x == false)
+			std::cout << "error";
 		//spr.Resize(20, 32)
 		return true;
 	}
-	void MultiplyMatrix(const Matrix &matrix,const vec3d &point, vec3d& Output) {
+	void MultiplyMatrix(const Matrix &matrix,const vec3d point, vec3d& Output) {
 		Output.x = point.x * matrix.i[0] + point.y * matrix.j[0] + point.z * matrix.k[0] + matrix.w[0];
 		Output.y = point.x * matrix.i[1] + point.y * matrix.j[1] + point.z * matrix.k[1] + matrix.w[1];
 		Output.z = point.x * matrix.i[2] + point.y * matrix.j[2] + point.z * matrix.k[2] + matrix.w[2];
-		float w =  point.x * matrix.i[3] + point.y * matrix.j[3] + point.z * matrix.k[3] + matrix.w[3];
-		if (w != 0)
-		{
-			Output.x /= w;
-			Output.y /= w;
-		}
+		Output.w = point.x * matrix.i[3] + point.y * matrix.j[3] + point.z * matrix.k[3] + matrix.w[3];
+		
 	}
 	float theata;
 	vec3d light = { 0,0,-1 };
@@ -624,27 +603,17 @@ protected:
 		matY.j[1] = 1;
 		matY.k[0] = -sin(yaw);
 		matY.k[2] = cos(yaw);
-		/*matY.w[0] = -Camera.x;
-		matY.w[1] = -Camera.y;
-		matY.w[2] = -Camera.z;*/
-
+		
 		cam.i[0] = cos(-yaw);
 		cam.i[2] = sin(-yaw);
 		cam.j[1] = 1;
 		cam.k[0] = -sin(-yaw);
 		cam.k[2] = cos(-yaw);
 
-		translation.i[0] = 1;
-		translation.j[1] = 1;
-		translation.k[2] = 1;
-		//translation.w[3] = 1;
-		translation.w[0] = -Camera.x;
-		translation.w[1] = -Camera.y;
-		translation.w[2] = -Camera.z;
 		lookPos = { 0,0,1 };
 		MultiplyMatrix(cam, lookPos, lookPos);
 	//	lookPos = { 0,0,1 };
-		float speed = 2.0f;
+		float speed = 20.0f;
 		if (GetAsyncKeyState('X') & 0x8000) {
 		//	Camera.z -= fElapseTime * 2;
 
@@ -667,7 +636,7 @@ protected:
 		}
 		std::vector<std::pair<Triangle,double>> trise;
 		for (const auto& tri : meshCube.tris) {
-			Triangle triProjected, triTranslated, triRotatedZX, triRotatedZ;
+			Triangle triProjected, triTranslated,triTemp ,triRotatedZX, triRotatedZ;
 			/*MultiplyMatrix(RotationZ,tri.p[0],triRotatedZ.p[0]);
 			MultiplyMatrix(RotationZ,tri.p[1],triRotatedZ.p[1]);
 			MultiplyMatrix(RotationZ,tri.p[2],triRotatedZ.p[2]);
@@ -687,10 +656,17 @@ protected:
 			
 			*/
 			triRotatedZX = tri;
-			MultiplyMatrix(translation, tri.p[0], triTranslated.p[0]);
+		/*	MultiplyMatrix(translation, tri.p[0], triTranslated.p[0]);
 			MultiplyMatrix(translation, tri.p[1], triTranslated.p[1]);
 			MultiplyMatrix(translation, tri.p[2], triTranslated.p[2]);
+		*/
+
+			triTranslated.p[0] = Vector_Sub(tri.p[0], Camera);
+			triTranslated.p[1] = Vector_Sub(tri.p[1], Camera);
+			triTranslated.p[2] = Vector_Sub(tri.p[2], Camera);
+
 			
+
 			triTranslated.tex[0] = tri.tex[0];
 			triTranslated.tex[1] = tri.tex[1];
 			triTranslated.tex[2] = tri.tex[2];
@@ -704,7 +680,7 @@ protected:
 			
 			
 			// translation finished..............................................................
-			
+			 
 			
 			
 			
@@ -761,11 +737,20 @@ protected:
 					MultiplyMatrix(Projection, clipped[i].p[1], triProjected.p[1]);
 					MultiplyMatrix(Projection, clipped[i].p[2], triProjected.p[2]);
 
-					float sizeX = 0.25f *  ScreenWidth();
-					float sizeY = 0.25f * ScreenHeight();
+					for (int j = 0; j < 3; j++) {
+						if (triProjected.p[j].w != 0)
+						{
+							triProjected.p[j].x /= triProjected.p[j].w;
+							triProjected.p[j].y /= triProjected.p[j].w;
+						}
 
-					float offsetX = ScreenWidth() * 0.75f;
-					float offsetY = ScreenHeight() * 0.75f;
+					}
+
+					float sizeX = 0.5f *  ScreenWidth();
+					float sizeY = 0.5f * ScreenHeight();
+
+					float offsetX = ScreenWidth() * 0.5f;
+					float offsetY = ScreenHeight() * 0.5f;
 
 					triProjected.p[0].x *= sizeX; triProjected.p[0].y *= sizeY;
 					triProjected.p[1].x *= sizeX; triProjected.p[1].y *= sizeY;
@@ -828,12 +813,14 @@ protected:
 					Triangle v = h.first;
 					pixel rgb;
 					//float dx = triToRaster.
-					rgb.SetRGB(h.second * 255, h.second * 255, h.second * 255);
-					FillTriangle(v.p[0].x, v.p[0].y, v.p[1].x, v.p[1].y, v.p[2].x, v.p[2].y,rgb);
+					//rgb.SetRGB(h.second * 255, h.second * 255, h.second * 255);
+				//	rgb.SetRGB(255, 255, 255);
+					//FillTriangle(v.p[0].x, v.p[0].y, v.p[1].x, v.p[1].y, v.p[2].x, v.p[2].y,rgb);
+					//DrawTriangle(v.p[0].x, v.p[0].y, v.p[1].x, v.p[1].y, v.p[2].x, v.p[2].y, rgb);
 
-					//DrawTexturedTriangle(spr,v.p[0].x, v.p[0].y, v.tex[0].u, v.tex[0].v, v.tex[0].w,
-						//					  v.p[1].x, v.p[1].y, v.tex[1].u, v.tex[1].v, v.tex[1].w,
-							//				  v.p[2].x, v.p[2].y, v.tex[2].u, v.tex[2].v, v.tex[2].w);
+					DrawTexturedTriangle(spr,v.p[0].x, v.p[0].y, v.tex[0].u, v.tex[0].v, v.tex[0].w,
+											  v.p[1].x, v.p[1].y, v.tex[1].u, v.tex[1].v, v.tex[1].w,
+											  v.p[2].x, v.p[2].y, v.tex[2].u, v.tex[2].v, v.tex[2].w);
 									
 				
 				//	DrawTriangle(v.p[0].x, v.p[0].y, v.p[1].x, v.p[1].y, v.p[2].x, v.p[2].y, c.Char.UnicodeChar, c.Attributes);
@@ -845,12 +832,12 @@ protected:
 
 
 		}
-		/*for (int i = 0; i < ScreenHeight(); i++) {
+		for (int i = 0; i < ScreenHeight(); i++) {
 			for (int j = 0; j < ScreenWidth(); j++) {
-				Draw(j, i, spr.GetSampleGlyph(j / (float)ScreenWidth(), i / (float)ScreenHeight()),
-					spr.GetSampleColor(j / (float)ScreenWidth(), i / (float)ScreenHeight()));
+				DrawPixel(j, i, spr.GetSamplePixel(j / (float)ScreenWidth(), i / (float)ScreenHeight()));
+					//spr.GetSampleColor(j / (float)ScreenWidth(), i / (float)ScreenHeight()));
 			}
-		}*/
+		}
 		//DrawLine(5, 11, 13, 40);
 		return true;
 	}
@@ -864,7 +851,7 @@ protected:
 int main() {
 
 	Graphics3D d;
-	d.ConstructPixel(250, 150, 0, 0,4,4, L"hello");
+	d.ConstructPixel(250 * 1, 150 * 1, 0, 0,4,4, L"hello");
 	//d.ConstructConsole(250, 150, 4, 4);
 	d.run();
 }
