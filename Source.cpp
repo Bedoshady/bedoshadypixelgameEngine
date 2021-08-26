@@ -1,562 +1,528 @@
-//#include "bedoConsoleGameEingine.h"
-#include "bedoPIxelGameEngine.h"
+/*
+OneLoneCoder.com - 3D Graphics Part #4 - Texturing & Depth Buffers
+"Tredimensjonal Grafikk" - @Javidx9
+
+License
+~~~~~~~
+One Lone Coder Console Game Engine  Copyright (C) 2018  Javidx9
+This program comes with ABSOLUTELY NO WARRANTY.
+This is free software, and you are welcome to redistribute it
+under certain conditions; See license for details.
+Original works located at:
+https://www.github.com/onelonecoder
+https://www.onelonecoder.com
+https://www.youtube.com/javidx9
+GNU GPLv3
+https://github.com/OneLoneCoder/videos/blob/master/LICENSE
+
+From Javidx9 :)
+~~~~~~~~~~~~~~~
+Hello! Ultimately I don't care what you use this for. It's intended to be
+educational, and perhaps to the oddly minded - a little bit of fun.
+Please hack this, change it and use it in any way you see fit. You acknowledge
+that I am not responsible for anything bad that happens as a result of
+your actions. However this code is protected by GNU GPLv3, see the license in the
+github repo. This means you must attribute me if you use it. You can view this
+license here: https://github.com/OneLoneCoder/videos/blob/master/LICENSE
+Cheers!
+
+Background
+~~~~~~~~~~
+3D Graphics is an interesting, visually pleasing suite of algorithms. This is the
+first video in a series that will demonstrate the fundamentals required to
+build your own software based 3D graphics systems.
+
+Video
+~~~~~
+https://youtu.be/ih20l3pJoeU
+https://youtu.be/XgMWc6LumG4
+https://youtu.be/HXSuNxpCzdM
+https://youtu.be/nBzCS-Y0FcY
+
+Author
+~~~~~~
+Twitter: @javidx9
+Blog: http://www.onelonecoder.com
+Discord: https://discord.gg/WhwHUMV
+
+
+Last Updated: 01/09/2018
+*/
+
+
+// PLEASE NOTE! The video shows the Spyro The Dragon Level - I can't redistribute that
+// so this file is configured to show the textured Jario cube. Please ensure you have 
+// downloaded the "Jario.spr" file from
+#define OLC_PGE_APPLICATION
+
+#include "bedoPixelGameEngine.h"
 #include <fstream>
-#include<strstream>
-#include <vector>
-#include<algorithm>
-#include<list>
+#include <strstream>
+#include <algorithm>
+#include <string>
+using namespace std;
 
-class Graphics3D : public bedoPixelGameEngine {
-private:
-	float fov = 90;
-	float a = (float)ScreenHeight() / (float)ScreenWidth();
-	float fRad = 1.0f / tanf((float)fov * 0.5f / 180.0f * 3.14159f);
-	float Zfar = 1000;
-	float Znear = 0.1f;
-	pixel *screenBuffer;
-	float *depth;
-	
-	float yaw =  0;
-	struct Matrix {
-		float i[4] = { 0,0,0,0 };
-		float j[4] = { 0,0,0,0 };
-		float k[4] = { 0,0,0,0 };
-		float w[4] = { 0,0,0,0 };
+// Created a 2D structure to hold texture coordinates
+struct vec2d
+{
+	float u = 0;
+	float v = 0;
+	float w = 1;
+};
 
-	};
+struct vec3d
+{
+	float x = 0;
+	float y = 0;
+	float z = 0;
+	float w = 1; // Need a 4th term to perform sensible matrix vector multiplication
+};
 
+struct triangle
+{
+	vec3d p[3];
+	vec2d t[3]; // added a texture coord per vertex
+	wchar_t sym;
+	short col;
+};
 
-	struct vec3d {
-		float x = 0, y = 0, z = 0;
-		float w = 1;
+struct mesh
+{
+	vector<triangle> tris;
 
-	};
-	struct vec2d {
-		float u = 0.0, v = 0.0, w = 1;
-		
-	};
-	struct Triangle {
-		vec3d p[3];
-		vec2d tex[3];
-
-	};
-	struct mesh {
-		std::vector<Triangle> tris;
-	};
-
-//	bool LoadFromObjectFile(std::string fileName, bool hasTexture = false) {
-		/*std::ifstream f(fileName);
+	bool LoadFromObjectFile(string sFilename, bool bHasTexture = false)
+	{
+		ifstream f(sFilename);
 		if (!f.is_open())
 			return false;
 
-		std::vector<vec3d> vec;
-		std::vector<vec2d> tex;
-		while (!f.eof()) {
+		// Local cache of verts
+		vector<vec3d> verts;
+		vector<vec2d> texs;
+
+		while (!f.eof())
+		{
 			char line[128];
 			f.getline(line, 128);
 
-			std::strstream s;
+			strstream s;
 			s << line;
+
 			char junk;
 
 			if (line[0] == 'v')
 			{
-				vec3d v; 
-				vec2d te;
-				if (hasTexture) {
-					if (line[1] == 't')
-						s >> junk >> junk >> te.u >> te.v;
-					else
-						s >> junk >> v.x >> v.y >> v.z;
-				}else
-				s >> junk >> v.x >> v.y >> v.z;
-				vec.push_back(v);
-				tex.push_back(te);
-			}
-			if (line[0] == 'f') {
-				if (!hasTexture) {
-					int f[3];
-					s >> junk >> f[0] >> f[1] >> f[2];
-					meshCube.tris.push_back({ vec[f[0] - 1], vec[f[1] - 1] , vec[f[2] - 1] });
-				}
-				else {
-					std::string token[6];
-					int tokenNumber = -1;
-					while (!s.eof()) {
-						char c = s.get();
-						if (c == ' ' || c == '/') {
-							tokenNumber++;
-						}
-						else {
-							token[tokenNumber].append(1, c);
-						}
-					}
-					token[tokenNumber].pop_back();
-					meshCube.tris.push_back({ vec[stoi(token[0]) - 1], vec[stoi(token[2]) - 1], vec[stoi(token[4]) - 1],
-											 tex[stoi(token[1]) - 1], tex[stoi(token[3]) - 1], tex[stoi(token[5]) - 1] });
-				}
-
-
-			}
-		}*/
-
-		bool LoadFromObjectFile(std::string sFilename, bool bHasTexture = false)
-		{
-			std::ifstream f(sFilename);
-			if (!f.is_open())
-				return false;
-			
-
-			// Local cache of verts
-			std::vector<vec3d> verts;
-			std::vector<vec2d> texs;
-
-			while (!f.eof())
-			{
-				char line[128];
-				f.getline(line, 128);
-
-				std::strstream s;
-				s << line;
-
-				char junk;
-
-				if (line[0] == 'v')
+				if (line[1] == 't')
 				{
-					if (line[1] == 't')
-					{
-						vec2d v;
-						s >> junk >> junk >> v.v >> v.u;
-						// A little hack for the spyro texture
-						v.u = 1.0f - v.u;
-						v.v = 1.0f - v.v;
-						texs.push_back(v);
-					}
-					else
-					{
-						vec3d v;
-						s >> junk >> v.x >> v.y >> v.z;
-						verts.push_back(v);
-					}
-				}
-
-				if (!bHasTexture)
-				{
-					if (line[0] == 'f')
-					{
-						int f[3];
-						s >> junk >> f[0] >> f[1] >> f[2];
-						meshCube.tris.push_back({ verts[f[0] - 1], verts[f[1] - 1], verts[f[2] - 1] });
-					}
+					vec2d v;
+					s >> junk >> junk >> v.u >> v.v;
+					// A little hack for the spyro texture
+					v.u = 1.0f - v.u;
+					v.v = 1.0f - v.v;
+					texs.push_back(v);
 				}
 				else
 				{
-					if (line[0] == 'f')
+					vec3d v;
+					s >> junk >> v.x >> v.y >> v.z;
+					verts.push_back(v);
+				}
+			}
+
+			if (!bHasTexture)
+			{
+				if (line[0] == 'f')
+				{
+					int f[3];
+					s >> junk >> f[0] >> f[1] >> f[2];
+					tris.push_back({ verts[f[0] - 1], verts[f[1] - 1], verts[f[2] - 1] });
+				}
+			}
+			else
+			{
+				if (line[0] == 'f')
+				{
+					s >> junk;
+
+					string tokens[6];
+					int nTokenCount = -1;
+
+
+					while (!s.eof())
 					{
-						s >> junk;
-
-						std::string tokens[6];
-						int nTokenCount = -1;
-
-
-						while (!s.eof())
-						{
-							char c = s.get();
-							if (c == ' ' || c == '/')
-								nTokenCount++;
-							else
-								tokens[nTokenCount].append(1, c);
-						}
-
-						tokens[nTokenCount].pop_back();
-
-
-						meshCube.tris.push_back({ verts[stoi(tokens[0]) - 1], verts[stoi(tokens[2]) - 1], verts[stoi(tokens[4]) - 1],
-							texs[stoi(tokens[1]) - 1], texs[stoi(tokens[3]) - 1], texs[stoi(tokens[5]) - 1] });
-
+						char c = s.get();
+						if (c == ' ' || c == '/')
+							nTokenCount++;
+						else
+							tokens[nTokenCount].append(1, c);
 					}
 
+					tokens[nTokenCount].pop_back();
+
+
+					tris.push_back({ verts[stoi(tokens[0]) - 1], verts[stoi(tokens[2]) - 1], verts[stoi(tokens[4]) - 1],
+						texs[stoi(tokens[1]) - 1], texs[stoi(tokens[3]) - 1], texs[stoi(tokens[5]) - 1] });
+
 				}
+
 			}
+		}
 		return true;
-
 	}
+};
 
+struct mat4x4
+{
+	float m[4][4] = { 0 };
+};
 
-	vec3d CrossProduct(vec3d t1, vec3d t2) {
-		vec3d ans;
-		ans.x = t1.y * t2.z - t1.z * t2.y;
-		ans.y = -(t1.x * t2.z - t1.z * t2.x);
-		ans.z = t1.x * t2.y - t1.y * t2.x;
-		return ans;
-	}
-	float dotProduct(const vec3d &t1,const vec3d &t2) {
-
-		return t1.x * t2.x + t1.y * t2.y + t1.z * t2.z;
-
-	}
-	vec3d normalize(vec3d t) {
-		float length = sqrt(t.x * t.x + t.y * t.y + t.z * t.z);
-
-		return { t.x / length, t.y / length, t.z / length };
-	}
-
-
-	vec3d IntersectPointWithPlane(vec3d Plane, vec3d PlaneNor, vec3d start, vec3d end,float& t) {
-		float d = dotProduct(Plane, PlaneNor);
-		vec3d endsubStart = vec3d{ end.x - start.x, end.y - start.y, end.z - start.z };
-		t = (float)(d - dotProduct(start, PlaneNor)) / dotProduct(PlaneNor, endsubStart);
-
-		return { t * (end.x - start.x) + start.x, t * (end.y - start.y) + start.y, t * (end.z - start.z) + start.z };
-	}
-	vec3d Vector_Add(vec3d t1, vec3d t2) {
-		return{ t1.x + t2.x, t1.y + t2.y, t1.z + t2.z };
-
-	}
-	vec3d Vector_Sub(vec3d t1, vec3d t2) {
-		return{ t1.x - t2.x, t1.y - t2.y, t1.z - t2.z };
-
-	}
-	vec3d Vector_Mul(vec3d t1, float t) {
-		return{ t1.x * t, t1.y * t, t1.z * t };
-
-	}
-	
-
-	int clip(vec3d planePoint, vec3d planeNor, Triangle tri, Triangle& tri2, Triangle& tri3)
-	{
-		//normalize(planeNor);
-		vec3d *outsidePoints[3], *insidePoints[3];
-		vec2d* outsideTexPoints[3], * insideTexPoints[3];
-		int numberOfinsidePoints = 0, numberOfOutsidePoints = 0;
-		for (int i = 0; i < 3; i++) {
-			if (dotProduct(Vector_Sub(tri.p[i],planePoint), planeNor) >= 0) {
-				insidePoints[numberOfinsidePoints++] = &tri.p[i];
-				insideTexPoints[numberOfinsidePoints-1] = &tri.tex[i];
-			}
-			else {
-				outsidePoints[numberOfOutsidePoints++] = &tri.p[i];
-				outsideTexPoints[numberOfOutsidePoints - 1] = &tri.tex[i];
-			}
-		}
-		if (numberOfinsidePoints == 0) {
-			return 0;
-		}
-		if (numberOfinsidePoints == 3)
-		{
-			tri2 = tri;
-			return 1;
-		}
-		if (numberOfinsidePoints == 1) {
-			float t;
-			tri2.p[0] = *insidePoints[0];
-			tri2.tex[0] = *insideTexPoints[0];
-		
-			tri2.p[1] = IntersectPointWithPlane(planePoint, planeNor, *insidePoints[0], *outsidePoints[0], t);
-			
-			tri2.tex[1].u = (*insideTexPoints[0]).u + ((*outsideTexPoints[0]).u - (*insideTexPoints[0]).u) * t;
-			tri2.tex[1].v = (*insideTexPoints[0]).v + ((*outsideTexPoints[0]).v - (*insideTexPoints[0]).v) * t;
-			tri2.tex[1].w = (*insideTexPoints[0]).w + ((*outsideTexPoints[0]).w - (*insideTexPoints[0]).w) * t;
-
-			tri2.p[2] = IntersectPointWithPlane(planePoint, planeNor, *insidePoints[0], *outsidePoints[1],t);
-			
-			tri2.tex[2].u = (*insideTexPoints[0]).u + ((*outsideTexPoints[1]).u - (*insideTexPoints[0]).u) * t;
-			tri2.tex[2].v = (*insideTexPoints[0]).v + ((*outsideTexPoints[1]).v - (*insideTexPoints[0]).v) * t;
-			tri2.tex[2].w = (*insideTexPoints[0]).w + ((*outsideTexPoints[1]).w - (*insideTexPoints[0]).w) * t;
-			return 1;
-
-		}
-		if (numberOfinsidePoints == 2) {
-			float t;
-			tri2.p[0] = *insidePoints[0];
-			tri2.tex[0] = *insideTexPoints[0];
-
-			tri2.p[1] = *insidePoints[1];
-			tri2.tex[1] = *insideTexPoints[1];
-		
-			tri2.p[2] = IntersectPointWithPlane(planePoint, planeNor, *insidePoints[1], *outsidePoints[0],t);
-			tri2.tex[2].u = (*insideTexPoints[1]).u + ((*outsideTexPoints[0]).u - (*insideTexPoints[1]).u) * t;
-			tri2.tex[2].v = (*insideTexPoints[1]).v + ((*outsideTexPoints[0]).v - (*insideTexPoints[1]).v) * t;
-			tri2.tex[2].w = (*insideTexPoints[1]).w + ((*outsideTexPoints[0]).w - (*insideTexPoints[1]).w) * t;
-
-
-			tri3.p[0] = *insidePoints[0];
-			tri3.tex[0] = *insideTexPoints[0];
-
-			tri3.p[1] = tri2.p[2];
-			tri3.tex[1] = tri2.tex[2];
-
-			tri3.p[2] = IntersectPointWithPlane(planePoint, planeNor, *insidePoints[0], *outsidePoints[0],t);
-
-			tri3.tex[2].u = (*insideTexPoints[0]).u + ((*outsideTexPoints[0]).u - (*insideTexPoints[0]).u) * t;
-			tri3.tex[2].v = (*insideTexPoints[0]).v + ((*outsideTexPoints[0]).v - (*insideTexPoints[0]).v) * t;
-			tri3.tex[2].w = (*insideTexPoints[0]).w + ((*outsideTexPoints[0]).w - (*insideTexPoints[0]).w) * t;
-
-			return 2;
-
-
-		}
-
-	}
-
+class olcEngine3D : public olc::PixelGameEngine
+{
 public:
-		Graphics3D() {
-			appname = L"3D Graphics";
-	}
-
-
-		mesh meshCube;
-		Matrix Projection;
-		Matrix RotationX;
-		Matrix RotationZ;
-		Matrix matY;
-		Matrix translation;
-		vec3d Camera = {0,0,0};
-		vec3d lookPos = { 0,0,1 };
-		Matrix cam;
-protected:
-	void DrawTexturedTriangle(sprite spr, int x1, int y1, float u1, float v1, float z1, 
-										   int x2, int y2, float u2, float v2, float z2,
-										   int x3, int y3, float u3, float v3, float z3)
+	olcEngine3D()
 	{
-		//sort according to y
-		if (y2 < y1) {
-			std::swap(y1, y2);
-			std::swap(x1, x2);
+		//m_sAppName = L"3D Demo";
+		//appname = L"3d demo";
+	}
 
 
-			std::swap(u1, u2);
-			std::swap(v1, v2);
-			std::swap(z1, z2);
+private:
+	mesh meshCube;
+	mat4x4 matProj;	// Matrix that converts from view space to screen space
+	vec3d vCamera;	// Location of camera in world space
+	vec3d vLookDir;	// Direction vector along the direction camera points
+	float fYaw;		// FPS Camera rotation in XZ plane
+	float fTheta;	// Spins World transform
+
+	olc::Sprite* sprTex1;
+
+	vec3d Matrix_MultiplyVector(mat4x4& m, vec3d& i)
+	{
+		vec3d v;
+		v.x = i.x * m.m[0][0] + i.y * m.m[1][0] + i.z * m.m[2][0] + i.w * m.m[3][0];
+		v.y = i.x * m.m[0][1] + i.y * m.m[1][1] + i.z * m.m[2][1] + i.w * m.m[3][1];
+		v.z = i.x * m.m[0][2] + i.y * m.m[1][2] + i.z * m.m[2][2] + i.w * m.m[3][2];
+		v.w = i.x * m.m[0][3] + i.y * m.m[1][3] + i.z * m.m[2][3] + i.w * m.m[3][3];
+		return v;
+	}
+
+	mat4x4 Matrix_MakeIdentity()
+	{
+		mat4x4 matrix;
+		matrix.m[0][0] = 1.0f;
+		matrix.m[1][1] = 1.0f;
+		matrix.m[2][2] = 1.0f;
+		matrix.m[3][3] = 1.0f;
+		return matrix;
+	}
+
+	mat4x4 Matrix_MakeRotationX(float fAngleRad)
+	{
+		mat4x4 matrix;
+		matrix.m[0][0] = 1.0f;
+		matrix.m[1][1] = cosf(fAngleRad);
+		matrix.m[1][2] = sinf(fAngleRad);
+		matrix.m[2][1] = -sinf(fAngleRad);
+		matrix.m[2][2] = cosf(fAngleRad);
+		matrix.m[3][3] = 1.0f;
+		return matrix;
+	}
+
+	mat4x4 Matrix_MakeRotationY(float fAngleRad)
+	{
+		mat4x4 matrix;
+		matrix.m[0][0] = cosf(fAngleRad);
+		matrix.m[0][2] = sinf(fAngleRad);
+		matrix.m[2][0] = -sinf(fAngleRad);
+		matrix.m[1][1] = 1.0f;
+		matrix.m[2][2] = cosf(fAngleRad);
+		matrix.m[3][3] = 1.0f;
+		return matrix;
+	}
+
+	mat4x4 Matrix_MakeRotationZ(float fAngleRad)
+	{
+		mat4x4 matrix;
+		matrix.m[0][0] = cosf(fAngleRad);
+		matrix.m[0][1] = sinf(fAngleRad);
+		matrix.m[1][0] = -sinf(fAngleRad);
+		matrix.m[1][1] = cosf(fAngleRad);
+		matrix.m[2][2] = 1.0f;
+		matrix.m[3][3] = 1.0f;
+		return matrix;
+	}
+
+	mat4x4 Matrix_MakeTranslation(float x, float y, float z)
+	{
+		mat4x4 matrix;
+		matrix.m[0][0] = 1.0f;
+		matrix.m[1][1] = 1.0f;
+		matrix.m[2][2] = 1.0f;
+		matrix.m[3][3] = 1.0f;
+		matrix.m[3][0] = x;
+		matrix.m[3][1] = y;
+		matrix.m[3][2] = z;
+		return matrix;
+	}
+
+	mat4x4 Matrix_MakeProjection(float fFovDegrees, float fAspectRatio, float fNear, float fFar)
+	{
+		float fFovRad = 1.0f / tanf(fFovDegrees * 0.5f / 180.0f * 3.14159f);
+		mat4x4 matrix;
+		matrix.m[0][0] = fAspectRatio * fFovRad;
+		matrix.m[1][1] = fFovRad;
+		matrix.m[2][2] = fFar / (fFar - fNear);
+		matrix.m[3][2] = (-fFar * fNear) / (fFar - fNear);
+		matrix.m[2][3] = 1.0f;
+		matrix.m[3][3] = 0.0f;
+		return matrix;
+	}
+
+	mat4x4 Matrix_MultiplyMatrix(mat4x4& m1, mat4x4& m2)
+	{
+		mat4x4 matrix;
+		for (int c = 0; c < 4; c++)
+			for (int r = 0; r < 4; r++)
+				matrix.m[r][c] = m1.m[r][0] * m2.m[0][c] + m1.m[r][1] * m2.m[1][c] + m1.m[r][2] * m2.m[2][c] + m1.m[r][3] * m2.m[3][c];
+		return matrix;
+	}
+
+	mat4x4 Matrix_PointAt(vec3d& pos, vec3d& target, vec3d& up)
+	{
+		// Calculate new forward direction
+		vec3d newForward = Vector_Sub(target, pos);
+		newForward = Vector_Normalise(newForward);
+
+		// Calculate new Up direction
+		vec3d a = Vector_Mul(newForward, Vector_DotProduct(up, newForward));
+		vec3d newUp = Vector_Sub(up, a);
+		newUp = Vector_Normalise(newUp);
+
+		// New Right direction is easy, its just cross product
+		vec3d newRight = Vector_CrossProduct(newUp, newForward);
+
+		// Construct Dimensioning and Translation Matrix	
+		mat4x4 matrix;
+		matrix.m[0][0] = newRight.x;	matrix.m[0][1] = newRight.y;	matrix.m[0][2] = newRight.z;	matrix.m[0][3] = 0.0f;
+		matrix.m[1][0] = newUp.x;		matrix.m[1][1] = newUp.y;		matrix.m[1][2] = newUp.z;		matrix.m[1][3] = 0.0f;
+		matrix.m[2][0] = newForward.x;	matrix.m[2][1] = newForward.y;	matrix.m[2][2] = newForward.z;	matrix.m[2][3] = 0.0f;
+		matrix.m[3][0] = pos.x;			matrix.m[3][1] = pos.y;			matrix.m[3][2] = pos.z;			matrix.m[3][3] = 1.0f;
+		return matrix;
+
+	}
+
+	mat4x4 Matrix_QuickInverse(mat4x4& m) // Only for Rotation/Translation Matrices
+	{
+		mat4x4 matrix;
+		matrix.m[0][0] = m.m[0][0]; matrix.m[0][1] = m.m[1][0]; matrix.m[0][2] = m.m[2][0]; matrix.m[0][3] = 0.0f;
+		matrix.m[1][0] = m.m[0][1]; matrix.m[1][1] = m.m[1][1]; matrix.m[1][2] = m.m[2][1]; matrix.m[1][3] = 0.0f;
+		matrix.m[2][0] = m.m[0][2]; matrix.m[2][1] = m.m[1][2]; matrix.m[2][2] = m.m[2][2]; matrix.m[2][3] = 0.0f;
+		matrix.m[3][0] = -(m.m[3][0] * matrix.m[0][0] + m.m[3][1] * matrix.m[1][0] + m.m[3][2] * matrix.m[2][0]);
+		matrix.m[3][1] = -(m.m[3][0] * matrix.m[0][1] + m.m[3][1] * matrix.m[1][1] + m.m[3][2] * matrix.m[2][1]);
+		matrix.m[3][2] = -(m.m[3][0] * matrix.m[0][2] + m.m[3][1] * matrix.m[1][2] + m.m[3][2] * matrix.m[2][2]);
+		matrix.m[3][3] = 1.0f;
+		return matrix;
+	}
+
+	vec3d Vector_Add(vec3d& v1, vec3d& v2)
+	{
+		return { v1.x + v2.x, v1.y + v2.y, v1.z + v2.z };
+	}
+
+	vec3d Vector_Sub(vec3d& v1, vec3d& v2)
+	{
+		return { v1.x - v2.x, v1.y - v2.y, v1.z - v2.z };
+	}
+
+	vec3d Vector_Mul(vec3d& v1, float k)
+	{
+		return { v1.x * k, v1.y * k, v1.z * k };
+	}
+
+	vec3d Vector_Div(vec3d& v1, float k)
+	{
+		return { v1.x / k, v1.y / k, v1.z / k };
+	}
+
+	float Vector_DotProduct(vec3d& v1, vec3d& v2)
+	{
+		return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+	}
+
+	float Vector_Length(vec3d& v)
+	{
+		return sqrtf(Vector_DotProduct(v, v));
+	}
+
+	vec3d Vector_Normalise(vec3d& v)
+	{
+		float l = Vector_Length(v);
+		return { v.x / l, v.y / l, v.z / l };
+	}
+
+	vec3d Vector_CrossProduct(vec3d& v1, vec3d& v2)
+	{
+		vec3d v;
+		v.x = v1.y * v2.z - v1.z * v2.y;
+		v.y = v1.z * v2.x - v1.x * v2.z;
+		v.z = v1.x * v2.y - v1.y * v2.x;
+		return v;
+	}
+
+	vec3d Vector_IntersectPlane(vec3d& plane_p, vec3d& plane_n, vec3d& lineStart, vec3d& lineEnd, float& t)
+	{
+		plane_n = Vector_Normalise(plane_n);
+		float plane_d = -Vector_DotProduct(plane_n, plane_p);
+		float ad = Vector_DotProduct(lineStart, plane_n);
+		float bd = Vector_DotProduct(lineEnd, plane_n);
+		t = (-plane_d - ad) / (bd - ad);
+		vec3d lineStartToEnd = Vector_Sub(lineEnd, lineStart);
+		vec3d lineToIntersect = Vector_Mul(lineStartToEnd, t);
+		return Vector_Add(lineStart, lineToIntersect);
+	}
+
+	int Triangle_ClipAgainstPlane(vec3d plane_p, vec3d plane_n, triangle& in_tri, triangle& out_tri1, triangle& out_tri2)
+	{
+		// Make sure plane normal is indeed normal
+		plane_n = Vector_Normalise(plane_n);
+
+		// Return signed shortest distance from point to plane, plane normal must be normalised
+		auto dist = [&](vec3d& p)
+		{
+			vec3d n = Vector_Normalise(p);
+			return (plane_n.x * p.x + plane_n.y * p.y + plane_n.z * p.z - Vector_DotProduct(plane_n, plane_p));
+		};
+
+		// Create two temporary storage arrays to classify points either side of plane
+		// If distance sign is positive, point lies on "inside" of plane
+		vec3d* inside_points[3];  int nInsidePointCount = 0;
+		vec3d* outside_points[3]; int nOutsidePointCount = 0;
+		vec2d* inside_tex[3]; int nInsideTexCount = 0;
+		vec2d* outside_tex[3]; int nOutsideTexCount = 0;
 
 
+		// Get signed distance of each point in triangle to plane
+		float d0 = dist(in_tri.p[0]);
+		float d1 = dist(in_tri.p[1]);
+		float d2 = dist(in_tri.p[2]);
+
+		if (d0 >= 0) { inside_points[nInsidePointCount++] = &in_tri.p[0]; inside_tex[nInsideTexCount++] = &in_tri.t[0]; }
+		else {
+			outside_points[nOutsidePointCount++] = &in_tri.p[0]; outside_tex[nOutsideTexCount++] = &in_tri.t[0];
 		}
-		if (y3 < y1) {
-			std::swap(y1, y3);
-			std::swap(x1, x3);
-	
-			std::swap(u1, u3);
-			std::swap(v1, v3);
-			std::swap(z1, z3);
+		if (d1 >= 0) {
+			inside_points[nInsidePointCount++] = &in_tri.p[1]; inside_tex[nInsideTexCount++] = &in_tri.t[1];
 		}
-		if (y3 < y2) {
-			std::swap(y3, y2);
-			std::swap(x3, x2);
-
-			std::swap(u3, u2);
-			std::swap(v3, v2);
-			std::swap(z3, z2);
+		else {
+			outside_points[nOutsidePointCount++] = &in_tri.p[1];  outside_tex[nOutsideTexCount++] = &in_tri.t[1];
+		}
+		if (d2 >= 0) {
+			inside_points[nInsidePointCount++] = &in_tri.p[2]; inside_tex[nInsideTexCount++] = &in_tri.t[2];
+		}
+		else {
+			outside_points[nOutsidePointCount++] = &in_tri.p[2];  outside_tex[nOutsideTexCount++] = &in_tri.t[2];
 		}
 
-		int dx1 = x2 - x1;
-		int dx2 = x3 - x1;
+		// Now classify triangle points, and break the input triangle into 
+		// smaller output triangles if required. There are four possible
+		// outcomes...
 
-		float du1 = u2 - u1;
-		float du2 = u3 - u1;
+		if (nInsidePointCount == 0)
+		{
+			// All points lie on the outside of plane, so clip whole triangle
+			// It ceases to exist
 
-		float dv1 = v2 - v1;
-		float dv2 = v3 - v1;
-		
-		float dz1 = z2 - z1;
-		float dz2 = z3 - z1;
-
-		float slopePix1 = 0, slopePix2 = 0;
-		
-		float slopeTexu1 = 0, slopeTexu2 = 0;
-		float slopeTexv1 = 0, slopeTexv2 = 0;
-		float slopeTexz1 = 0, slopeTexz2 = 0;
-
-		if (y2 != y1) {
-			slopePix1  = (float)dx1 / (float)(y2 - y1);
-			slopeTexu1 = (float)du1 / (float)(y2 - y1);
-			slopeTexv1 = (float)dv1 / (float)(y2 - y1);
-			slopeTexz1 = (float)dz1 / (float)(y2 - y1);
-
+			return 0; // No returned triangles are valid
 		}
-		if (y3 != y1) {
-			slopePix2  = (float)dx2 / (float)(y3 - y1);
-			slopeTexu2 = (float)du2 / (float)(y3 - y1);
-			slopeTexv2 = (float)dv2 / (float)(y3 - y1);
-			slopeTexz2 = (float)dz2 / (float)(y3 - y1);
 
+		if (nInsidePointCount == 3)
+		{
+			// All points lie on the inside of plane, so do nothing
+			// and allow the triangle to simply pass through
+			out_tri1 = in_tri;
+
+			return 1; // Just the one returned original triangle is valid
 		}
-		if (y1 < y2) {
-			for (int i = y1; i < y2; i++) {
-				int sx = x1 + (float)(i - y1) * slopePix1;
-				int ex = x1 + (float)(i - y1) * slopePix2;
-			
-				float tex_u1 = u1 + (float)(i - y1) * slopeTexu1;
-				float tex_u2 = u1 + (float)(i - y1) * slopeTexu2;
-				
-				float tex_v1 = v1 + (float)(i - y1) * slopeTexv1;
-				float tex_v2 = v1 + (float)(i - y1) * slopeTexv2;
 
-				float tex_z1 = z1 + (float)(i - y1) * slopeTexz1;
-				float tex_z2 = z1 + (float)(i - y1) * slopeTexz2;
+		if (nInsidePointCount == 1 && nOutsidePointCount == 2)
+		{
+			// Triangle should be clipped. As two points lie outside
+			// the plane, the triangle simply becomes a smaller triangle
 
-				if (ex < sx) {
-					std::swap(sx, ex);
-					std::swap(tex_u1, tex_u2);
-					std::swap(tex_v1, tex_v2);
-					std::swap(tex_z1, tex_z2);
+			// Copy appearance info to new triangle
+			out_tri1.col = in_tri.col;
+			out_tri1.sym = in_tri.sym;
 
+			// The inside point is valid, so keep that...
+			out_tri1.p[0] = *inside_points[0];
+			out_tri1.t[0] = *inside_tex[0];
 
+			// but the two new points are at the locations where the 
+			// original sides of the triangle (lines) intersect with the plane
+			float t;
+			out_tri1.p[1] = Vector_IntersectPlane(plane_p, plane_n, *inside_points[0], *outside_points[0], t);
+			out_tri1.t[1].u = t * (outside_tex[0]->u - inside_tex[0]->u) + inside_tex[0]->u;
+			out_tri1.t[1].v = t * (outside_tex[0]->v - inside_tex[0]->v) + inside_tex[0]->v;
+			out_tri1.t[1].w = t * (outside_tex[0]->w - inside_tex[0]->w) + inside_tex[0]->w;
 
-				}
-					for (int j = sx; j < ex; j++) {
-						float t = (float)(j - sx) / (float)(ex - sx);
-						float ju1 = tex_u1 + t * (tex_u2 - tex_u1);
-						float jv1 = tex_v1 + t * (tex_v2 - tex_v1);
-						float jz1 = tex_z1 + t * (tex_z2 - tex_z1);
-						ju1 /= jz1;
-						jv1 /= jz1;
-						DrawPixel(j, i, spr.GetSamplePixel(jv1, ju1));//spr.GetSampleGlyph(ju1,jv1), spr.GetSampleColor(ju1,jv1));
-						//if (depth[i * ScreenWidth() + j] > jz1) {
-						//	//DrawPixel(j, i, spr.GetSamplePixel(ju1, jv1));//spr.GetSampleGlyph(ju1, jv1), spr.GetSampleColor(ju1, jv1));
-						//	screenBuffer[i * ScreenWidth() + j] = spr.GetSamplePixel(ju1, jv1);
-						//	depth[i * ScreenWidth() + j] = jz1;
-						//}
-				     }
-			
-			}
+			out_tri1.p[2] = Vector_IntersectPlane(plane_p, plane_n, *inside_points[0], *outside_points[1], t);
+			out_tri1.t[2].u = t * (outside_tex[1]->u - inside_tex[0]->u) + inside_tex[0]->u;
+			out_tri1.t[2].v = t * (outside_tex[1]->v - inside_tex[0]->v) + inside_tex[0]->v;
+			out_tri1.t[2].w = t * (outside_tex[1]->w - inside_tex[0]->w) + inside_tex[0]->w;
 
-
+			return 1; // Return the newly formed single triangle
 		}
-		du1 = u3 - u2;
-		dv1 = v3 - v2;
-		dz1 = z3 - z2;
-		if (y3 != y2) {
-			slopePix1 = (float)(x3 - x2) / (float)(y3 - y2);
-			slopeTexu1 = (float)du1 / (float)(y3 - y2);
-			slopeTexv1 = (float)dv1 / (float)(y3 - y2);
-			slopeTexz1 = (float)dz1 / (float)(y3 - y2);
 
-		
-		}
-			if (y2 < y3) {
-			for (int i = y2; i < y3; i++) {
-				int sx = x2 + (float)(i - y2) * slopePix1;
-				int ex = x1 + (float)(i - y1) * slopePix2;
+		if (nInsidePointCount == 2 && nOutsidePointCount == 1)
+		{
+			// Triangle should be clipped. As two points lie inside the plane,
+			// the clipped triangle becomes a "quad". Fortunately, we can
+			// represent a quad with two new triangles
 
-				float tex_u1 = u2 + (float)(i - y2) * slopeTexu1;
-				float tex_u2 = u1 + (float)(i - y1) * slopeTexu2;
+			// Copy appearance info to new triangles
+			out_tri1.col = in_tri.col;
+			out_tri1.sym = in_tri.sym;
 
-				float tex_v1 = v2 + (float)(i - y2) * slopeTexv1;
-				float tex_v2 = v1 + (float)(i - y1) * slopeTexv2;
+			out_tri2.col = in_tri.col;
+			out_tri2.sym = in_tri.sym;
 
-				float tex_z1 = z2 + (float)(i - y2) * slopeTexz1;
-				float tex_z2 = z1 + (float)(i - y1) * slopeTexz2;
+			// The first triangle consists of the two inside points and a new
+			// point determined by the location where one side of the triangle
+			// intersects with the plane
+			out_tri1.p[0] = *inside_points[0];
+			out_tri1.p[1] = *inside_points[1];
+			out_tri1.t[0] = *inside_tex[0];
+			out_tri1.t[1] = *inside_tex[1];
 
-				if (ex < sx) {
-					std::swap(sx, ex);
-					std::swap(tex_u1, tex_u2);
-					std::swap(tex_v1, tex_v2);
-					std::swap(tex_z1, tex_z2);
+			float t;
+			out_tri1.p[2] = Vector_IntersectPlane(plane_p, plane_n, *inside_points[0], *outside_points[0], t);
+			out_tri1.t[2].u = t * (outside_tex[0]->u - inside_tex[0]->u) + inside_tex[0]->u;
+			out_tri1.t[2].v = t * (outside_tex[0]->v - inside_tex[0]->v) + inside_tex[0]->v;
+			out_tri1.t[2].w = t * (outside_tex[0]->w - inside_tex[0]->w) + inside_tex[0]->w;
 
-
-
-				}
-				for (int j = sx; j < ex; j++) {
-					float t = (float)(j - sx) / (float)(ex - sx);
-					float ju1 = tex_u1 + t * (tex_u2 - tex_u1);
-					float jv1 = tex_v1 + t * (tex_v2 - tex_v1);
-					float jz1 = tex_z1 + t * (tex_z2 - tex_z1);
-					ju1 /= jz1;
-					jv1 /= jz1;
-					jz1 = 1.0f / jz1;
-						DrawPixel(j, i, spr.GetSamplePixel(jv1, ju1));//spr.GetSampleGlyph(ju1, jv1), spr.GetSampleColor(ju1, jv1));
-					/*if (depth[i * ScreenWidth() + j] > jz1) {
-						screenBuffer[i * ScreenWidth() + j] = spr.GetSamplePixel(ju1, jv1);
-						depth[i * ScreenWidth() + j] = jz1;
-					}*/
-				}
-
-			}
-
-
+			// The second triangle is composed of one of he inside points, a
+			// new point determined by the intersection of the other side of the 
+			// triangle and the plane, and the newly created point above
+			out_tri2.p[0] = *inside_points[1];
+			out_tri2.t[0] = *inside_tex[1];
+			out_tri2.p[1] = out_tri1.p[2];
+			out_tri2.t[1] = out_tri1.t[2];
+			out_tri2.p[2] = Vector_IntersectPlane(plane_p, plane_n, *inside_points[1], *outside_points[0], t);
+			out_tri2.t[2].u = t * (outside_tex[0]->u - inside_tex[1]->u) + inside_tex[1]->u;
+			out_tri2.t[2].v = t * (outside_tex[0]->v - inside_tex[1]->v) + inside_tex[1]->v;
+			out_tri2.t[2].w = t * (outside_tex[0]->w - inside_tex[1]->w) + inside_tex[1]->w;
+			return 2; // Return two newly formed triangles which form a quad
 		}
 	}
-	sprite spr;
-	bool OnUserCreate() {
-		a = (float)ScreenHeight() / (float)ScreenWidth();
-		std::string filename = "C:\\dev\\test\\test\\hub.obj";
-		if (!LoadFromObjectFile(filename, true)) { std::cout << "error"; return false; }
-
-		Projection.i[0] = 1 * fRad * a;
-		Projection.i[1] = 0;
-		Projection.i[2] = 0;
-		Projection.i[3] = 0;
-
-		//
-		Projection.j[0] = 0;
-		Projection.j[1] = fRad;
-		Projection.j[2] = 0;
-		Projection.j[3] = 0;
-		//
-		
-		Projection.k[0] = 0;
-		Projection.k[1] = 0;
-		Projection.k[2] = (float)Zfar / (float)(Zfar - Znear);
-		Projection.k[3] = 1.0f;
-
-			
-		Projection.w[0] = 0;
-		Projection.w[1] = 0;
-		Projection.w[2] = -(float)Znear * Zfar / (Zfar - Znear);
-		Projection.w[3] = 0;
 
 
-		// meshCube.tris = {
 
-		//// SOUTH
-		//{ 0.0f, 0.0f, 0.0f,1,    0.0f, 1.0f, 0.0f,1,    1.0f, 1.0f, 0.0f,1,   1,0,1, 1,1,1, 0,1,1},
-		//{ 0.0f, 0.0f, 0.0f,1,    1.0f, 1.0f, 0.0f,1,    1.0f, 0.0f, 0.0f,1,   1,0,1, 0,1,1, 0,0,1},
-		//				   
-		//// EAST            
-		//{ 1.0f, 0.0f, 0.0f,1,    1.0f, 1.0f, 0.0f,1,    1.0f, 1.0f, 1.0f,1,   1,0,1, 1,1,1, 0,1,1 },
-		//{ 1.0f, 0.0f, 0.0f,1,    1.0f, 1.0f, 1.0f,1,    1.0f, 0.0f, 1.0f,1,   1,0,1, 0,1,1, 0,0,1 },
-		//				  
-		//// NORTH           
-		//{ 1.0f, 0.0f, 1.0f,1,    1.0f, 1.0f, 1.0f,1,    0.0f, 1.0f, 1.0f,1,   1,0,1, 1,1,1, 0,1,1 },
-		//{ 1.0f, 0.0f, 1.0f,1,    0.0f, 1.0f, 1.0f,1,    0.0f, 0.0f, 1.0f,1,   1,0,1, 0,1,1, 0,0,1 },
-		//				  
-		//// WEST            
-		//{ 0.0f, 0.0f, 1.0f,1,    0.0f, 1.0f, 1.0f,1,    0.0f, 1.0f, 0.0f,1,   1,0,1, 1,1,1, 0,1,1 },
-		//{ 0.0f, 0.0f, 1.0f,1,    0.0f, 1.0f, 0.0f,1,    0.0f, 0.0f, 0.0f,1,   1,0,1, 0,1,1, 0,0,1 },
-		//				  
-		//// TOP             
-		//{ 0.0f, 1.0f, 0.0f,1,    0.0f, 1.0f, 1.0f,1,    1.0f, 1.0f, 1.0f,1,   1,0,1, 1,1,1, 0,1,1},
-		//{ 0.0f, 1.0f, 0.0f,1,    1.0f, 1.0f, 1.0f,1,    1.0f, 1.0f, 0.0f,1,   1,0,1, 0,1,1, 0,0,1},
-
-		//// BOTTOM                                                    
-		//{ 1.0f, 0.0f, 1.0f,1,    0.0f, 0.0f, 1.0f,1,    0.0f, 0.0f, 0.0f,1,   1,0,1, 1,1,1, 0,1,1 },
-		//{ 1.0f, 0.0f, 1.0f,1,    0.0f, 0.0f, 0.0f,1,    1.0f, 0.0f, 0.0f,1,   1,0,1, 0,1,1, 0,0,1 },
-
-		//};
-		yaw = 0;
-		bool x = spr.LoadImage("C:\\dev\\test\\test\\high.png");
-		if (x == false)
-			std::cout << "error";
-		//spr.Resize(20, 32)
-		screenBuffer = new pixel[ScreenWidth() * ScreenHeight()];
-		depth = new float[ScreenWidth() * ScreenHeight()];
-		
-		return true;
-	}
-	void MultiplyMatrix(const Matrix &matrix,const vec3d point, vec3d& Output) {
-		Output.x = point.x * matrix.i[0] + point.y * matrix.j[0] + point.z * matrix.k[0] + matrix.w[0];
-		Output.y = point.x * matrix.i[1] + point.y * matrix.j[1] + point.z * matrix.k[1] + matrix.w[1];
-		Output.z = point.x * matrix.i[2] + point.y * matrix.j[2] + point.z * matrix.k[2] + matrix.w[2];
-		Output.w = point.x * matrix.i[3] + point.y * matrix.j[3] + point.z * matrix.k[3] + matrix.w[3];
-		
-	}
-	float theata;
-	vec3d light = { 0,0,-1 };
-
-	/*CHAR_INFO GetColor(double color) {
+	// Taken From Command Line Webcam Video
+	/*CHAR_INFO GetColour(float lum)
+	{
 		short bg_col, fg_col;
 		wchar_t sym;
-		int pixel_bw = (int)(13.0f * color);
+		int pixel_bw = (int)(13.0f * lum);
 		switch (pixel_bw)
 		{
 		case 0: bg_col = BG_BLACK; fg_col = FG_BLACK; sym = PIXEL_SOLID; break;
@@ -578,219 +544,269 @@ protected:
 		default:
 			bg_col = BG_BLACK; fg_col = FG_BLACK; sym = PIXEL_SOLID;
 		}
+
 		CHAR_INFO c;
-		c.Attributes = bg_col + fg_col;
+		c.Attributes = bg_col | fg_col;
 		c.Char.UnicodeChar = sym;
 		return c;
 	}*/
-	//sprite spr;
-	bool OnUserUpdate(float fElapseTime)override {
-		pixel rgb;
-		rgb.SetRGB(0, 0, 0);
-		Fill(0, 0, ScreenWidth(), ScreenHeight(),rgb);
+
+	float* pDepthBuffer = nullptr;
+
+public:
+	bool OnUserCreate() override
+	{
+
+		pDepthBuffer = new float[ScreenWidth() * ScreenHeight()];
+
+		// Load object file
+		if(!meshCube.LoadFromObjectFile("C:\\dev\\Olc3dEngine\\Debug\\hub.obj",true))return false;
 		
-		//theata += fElapseTime;
-		for (int i = 0; i < ScreenWidth() * ScreenHeight(); i++) {
-			screenBuffer[i].SetRGB(0, 0, 0);
-			depth[i] = INFINITY;
-		}
+		//meshCube.tris = {
+
+		//	// SOUTH
+		//	{ 0.0f, 0.0f, 0.0f, 1.0f,    0.0f, 1.0f, 0.0f, 1.0f,    1.0f, 1.0f, 0.0f, 1.0f,		0.0f, 1.0f, 1.0f,		0.0f, 0.0f, 1.0f,		1.0f, 0.0f, 1.0f,},
+		//	{ 0.0f, 0.0f, 0.0f, 1.0f,    1.0f, 1.0f, 0.0f, 1.0f,    1.0f, 0.0f, 0.0f, 1.0f,		0.0f, 1.0f, 1.0f,		1.0f, 0.0f, 1.0f,		1.0f, 1.0f, 1.0f,},
+
+		//	// EAST           																			   
+		//	{ 1.0f, 0.0f, 0.0f, 1.0f,    1.0f, 1.0f, 0.0f, 1.0f,    1.0f, 1.0f, 1.0f, 1.0f,		0.0f, 1.0f, 1.0f,		0.0f, 0.0f, 1.0f,		1.0f, 0.0f, 1.0f,},
+		//	{ 1.0f, 0.0f, 0.0f, 1.0f,    1.0f, 1.0f, 1.0f, 1.0f,    1.0f, 0.0f, 1.0f, 1.0f,		0.0f, 1.0f, 1.0f,		1.0f, 0.0f, 1.0f,		1.0f, 1.0f, 1.0f,},
+
+		//	// NORTH           																			   
+		//	{ 1.0f, 0.0f, 1.0f, 1.0f,    1.0f, 1.0f, 1.0f, 1.0f,    0.0f, 1.0f, 1.0f, 1.0f,		0.0f, 1.0f, 1.0f,		0.0f, 0.0f, 1.0f,		1.0f, 0.0f, 1.0f,},
+		//	{ 1.0f, 0.0f, 1.0f, 1.0f,    0.0f, 1.0f, 1.0f, 1.0f,    0.0f, 0.0f, 1.0f, 1.0f,		0.0f, 1.0f, 1.0f,		1.0f, 0.0f, 1.0f,		1.0f, 1.0f, 1.0f,},
+
+		//	// WEST            																			   
+		//	{ 0.0f, 0.0f, 1.0f, 1.0f,    0.0f, 1.0f, 1.0f, 1.0f,    0.0f, 1.0f, 0.0f, 1.0f,		0.0f, 1.0f, 1.0f,		0.0f, 0.0f, 1.0f,		1.0f, 0.0f, 1.0f,},
+		//	{ 0.0f, 0.0f, 1.0f, 1.0f,    0.0f, 1.0f, 0.0f, 1.0f,    0.0f, 0.0f, 0.0f, 1.0f,		0.0f, 1.0f, 1.0f,		1.0f, 0.0f, 1.0f,		1.0f, 1.0f, 1.0f,},
+
+		//	// TOP             																			   
+		//	{ 0.0f, 1.0f, 0.0f, 1.0f,    0.0f, 1.0f, 1.0f, 1.0f,    1.0f, 1.0f, 1.0f, 1.0f,		0.0f, 1.0f, 1.0f,		0.0f, 0.0f, 1.0f,		1.0f, 0.0f, 1.0f,},
+		//	{ 0.0f, 1.0f, 0.0f, 1.0f,    1.0f, 1.0f, 1.0f, 1.0f,    1.0f, 1.0f, 0.0f, 1.0f,		0.0f, 1.0f, 1.0f,		1.0f, 0.0f, 1.0f,		1.0f, 1.0f, 1.0f,},
+
+		//	// BOTTOM          																			  
+		//	{ 1.0f, 0.0f, 1.0f, 1.0f,    0.0f, 0.0f, 1.0f, 1.0f,    0.0f, 0.0f, 0.0f, 1.0f,		0.0f, 1.0f, 1.0f,		0.0f, 0.0f, 1.0f,		1.0f, 0.0f, 1.0f,},
+		//	{ 1.0f, 0.0f, 1.0f, 1.0f,    0.0f, 0.0f, 0.0f, 1.0f,    1.0f, 0.0f, 0.0f, 1.0f,		0.0f, 1.0f, 1.0f,		1.0f, 0.0f, 1.0f,		1.0f, 1.0f, 1.0f,},
+
+		//};
 
 
-		RotationZ.i[0] = cosf(theata);
-		RotationZ.i[1] = -sinf(theata);
+		sprTex1 = new olc::Sprite("C:\\dev\\Olc3dEngine\\Debug\\high.png");// (L"C:\\dev\\Olc3dEngine\\Debug\\high.png");
+		//sprTex1->LoadImageW("C:\\dev\\Olc3dEngine\\Debug\\high.png");
+		// Projection Matrix
+		matProj = Matrix_MakeProjection(90.0f, (float)ScreenHeight() / (float)ScreenWidth(), 0.1f, 1000.0f);
+		return true;
+	}
 
-		RotationZ.j[0] = sinf(theata);
-		RotationZ.j[1] = cosf(theata);
+	bool OnUserUpdate(float fElapsedTime) override
+	{
+		if (GetAsyncKeyState('L') & 0x8000)
+			vCamera.y += 8.0f * fElapsedTime;	// Travel Upwards
 
-		RotationZ.k[2] = 1;
+		if (GetAsyncKeyState('P') & 0x8000)
+			vCamera.y -= 8.0f * fElapsedTime;	// Travel Downwards
 
-		RotationX.j[1] =  cosf(0.5 * theata);
-		RotationX.j[2] = -sinf(0.5 * theata);
- 
-		RotationX.k[1] =  sinf(0.5 * theata);
-		RotationX.k[2] =  cosf(0.5 * theata);
 
-		RotationX.i[0] = 1;
-		if (GetAsyncKeyState('D') & 0x8000)
-			yaw += fElapseTime * 5;
-		if(GetAsyncKeyState('A') & 0x8000)
-			yaw -= fElapseTime * 5;
-
-		matY.i[0] = cos(yaw);
-		matY.i[2] = sin(yaw);
-		matY.j[1] = 1;
-		matY.k[0] = -sin(yaw);
-		matY.k[2] = cos(yaw);
 		
-		cam.i[0] = cos(-yaw);
-		cam.i[2] = sin(-yaw);
-		cam.j[1] = 1;
-		cam.k[0] = -sin(-yaw);
-		cam.k[2] = cos(-yaw);
 
-		lookPos = { 0,0,1 };
-		MultiplyMatrix(cam, lookPos, lookPos);
-	//	lookPos = { 0,0,1 };
-		float speed = 20.0f;
-		if (GetAsyncKeyState('X') & 0x8000) {
-		//	Camera.z -= fElapseTime * 2;
 
-			Camera.x -= speed * lookPos.x * fElapseTime * 2;
-			Camera.y -= speed * lookPos.y * fElapseTime * 2;
-			Camera.z -= speed * lookPos.z * fElapseTime * 2;
-		}
+		vec3d vForward = Vector_Mul(vLookDir, 8.0f * fElapsedTime);
+
+		// Standard FPS Control scheme, but turn instead of strafe
 		if (GetAsyncKeyState('W') & 0x8000)
+			vCamera = Vector_Add(vCamera, vForward);
+
+		if (GetAsyncKeyState('S') & 0x8000)
+			vCamera = Vector_Sub(vCamera, vForward);
+
+		if (GetAsyncKeyState('A') & 0x8000)
+			fYaw -= 2.0f * fElapsedTime;
+
+		if (GetAsyncKeyState('D') & 0x8000)
+			fYaw += 2.0f * fElapsedTime;
+
+
+
+
+		// Set up "World Tranmsform" though not updating theta 
+		// makes this a bit redundant
+		mat4x4 matRotZ, matRotX;
+	//	fTheta += 1.0f * fElapsedTime; // Uncomment to spin me right round baby right round
+		matRotZ = Matrix_MakeRotationZ(fTheta * 0.5f);
+		matRotX = Matrix_MakeRotationX(fTheta);
+
+		mat4x4 matTrans;
+		matTrans = Matrix_MakeTranslation(0.0f, 0.0f, 5.0f);
+
+		mat4x4 matWorld;
+		matWorld = Matrix_MakeIdentity();	// Form World Matrix
+		matWorld = Matrix_MultiplyMatrix(matRotZ, matRotX); // Transform by rotation
+		matWorld = Matrix_MultiplyMatrix(matWorld, matTrans); // Transform by translation
+
+		// Create "Point At" Matrix for camera
+		vec3d vUp = { 0,1,0 };
+		vec3d vTarget = { 0,0,1 };
+		mat4x4 matCameraRot = Matrix_MakeRotationY(fYaw);
+		vLookDir = Matrix_MultiplyVector(matCameraRot, vTarget);
+		vTarget = Vector_Add(vCamera, vLookDir);
+		mat4x4 matCamera = Matrix_PointAt(vCamera, vTarget, vUp);
+
+		// Make view matrix from camera
+		mat4x4 matView = Matrix_QuickInverse(matCamera);
+
+		// Store triagles for rastering later
+		vector<triangle> vecTrianglesToRaster;
+
+		// Draw Triangles
+		for (auto tri : meshCube.tris)
 		{
-			Camera.x += speed * lookPos.x * fElapseTime * 2;
-			Camera.y += speed * lookPos.y * fElapseTime * 2;
-			Camera.z += speed * lookPos.z * fElapseTime * 2;
-		}
+			triangle triProjected, triTransformed, triViewed;
 
-		if (GetAsyncKeyState('P') & 0x8000) {
-			Camera.y -= speed * fElapseTime * 2;
-		}
-		if (GetAsyncKeyState('L') & 0x8000) {
-			Camera.y += speed * fElapseTime * 2;
-		}
-		std::vector<std::pair<Triangle,double>> trise;
-		for (const auto& tri : meshCube.tris) {
-			Triangle triProjected, triTranslated,triTemp ,triRotatedZX, triRotatedZ;
-			/*MultiplyMatrix(RotationZ,tri.p[0],triRotatedZ.p[0]);
-			MultiplyMatrix(RotationZ,tri.p[1],triRotatedZ.p[1]);
-			MultiplyMatrix(RotationZ,tri.p[2],triRotatedZ.p[2]);
-		   //triRotatedZ = tri;
-		   //Rotate in X-Axis
-			triRotatedZ.tex[0] = tri.tex[0];
-			triRotatedZ.tex[1] = tri.tex[1];
-			triRotatedZ.tex[2] = tri.tex[2];
-			
-			MultiplyMatrix(RotationX,triRotatedZ.p[0], triRotatedZX.p[0]);
-			MultiplyMatrix(RotationX,triRotatedZ.p[1], triRotatedZX.p[1]);
-			MultiplyMatrix(RotationX,triRotatedZ.p[2], triRotatedZX.p[2]);
-			
-			triRotatedZX.tex[0] = triRotatedZ.tex[0];
-			triRotatedZX.tex[1] = triRotatedZ.tex[1];
-			triRotatedZX.tex[2] = triRotatedZ.tex[2];
-			
-			*/
-			triRotatedZX = tri;
-		/*	MultiplyMatrix(translation, tri.p[0], triTranslated.p[0]);
-			MultiplyMatrix(translation, tri.p[1], triTranslated.p[1]);
-			MultiplyMatrix(translation, tri.p[2], triTranslated.p[2]);
-		*/
+			// World Matrix Transform
+			triTransformed.p[0] = Matrix_MultiplyVector(matWorld, tri.p[0]);
+			triTransformed.p[1] = Matrix_MultiplyVector(matWorld, tri.p[1]);
+			triTransformed.p[2] = Matrix_MultiplyVector(matWorld, tri.p[2]);
+			triTransformed.t[0] = tri.t[0];
+			triTransformed.t[1] = tri.t[1];
+			triTransformed.t[2] = tri.t[2];
 
-			triTranslated.p[0] = Vector_Sub(tri.p[0], Camera);
-			triTranslated.p[1] = Vector_Sub(tri.p[1], Camera);
-			triTranslated.p[2] = Vector_Sub(tri.p[2], Camera);
+			// Calculate triangle Normal
+			vec3d normal, line1, line2;
 
-			
+			// Get lines either side of triangle
+			line1 = Vector_Sub(triTransformed.p[1], triTransformed.p[0]);
+			line2 = Vector_Sub(triTransformed.p[2], triTransformed.p[0]);
 
-			triTranslated.tex[0] = tri.tex[0];
-			triTranslated.tex[1] = tri.tex[1];
-			triTranslated.tex[2] = tri.tex[2];
+			// Take cross product of lines to get normal to triangle surface
+			normal = Vector_CrossProduct(line1, line2);
 
+			// You normally need to normalise a normal!
+			normal = Vector_Normalise(normal);
 
-			MultiplyMatrix(matY, triTranslated.p[0], triTranslated.p[0]);
-			MultiplyMatrix(matY, triTranslated.p[1], triTranslated.p[1]);
-			MultiplyMatrix(matY, triTranslated.p[2], triTranslated.p[2]);
-			
+			// Get Ray from triangle to camera
+			vec3d vCameraRay = Vector_Sub(triTransformed.p[0], vCamera);
 
-			
-			
-			// translation finished..............................................................
-			 
-			
-			
-			
-			
-			
-			
-			vec3d toPoint, vec1, vec2, crossProduct;
-			
+			// If ray is aligned with normal, then triangle is visible
+			if (Vector_DotProduct(normal, vCameraRay) < 0.0f)
+			{
+				// Illumination
+				vec3d light_direction = { 0.0f, 1.0f, -1.0f };
+				light_direction = Vector_Normalise(light_direction);
 
-			vec1.x = triTranslated.p[1].x - triTranslated.p[0].x;
-			vec1.y = triTranslated.p[1].y - triTranslated.p[0].y;
-			vec1.z = triTranslated.p[1].z - triTranslated.p[0].z;
-			
-			vec2.x = triTranslated.p[2].x - triTranslated.p[0].x;
-			vec2.y = triTranslated.p[2].y - triTranslated.p[0].y;
-			vec2.z = triTranslated.p[2].z - triTranslated.p[0].z;
-			
-			crossProduct = CrossProduct(vec1, vec2);
+				// How "aligned" are light direction and triangle surface normal?
+				float dp = max(0.1f, Vector_DotProduct(light_direction, normal));
 
-			toPoint.x = triTranslated.p[0].x ;
-			toPoint.y = triTranslated.p[0].y ;
-			toPoint.z = triTranslated.p[0].z ;
-			
-			if (dotProduct(toPoint, crossProduct) < 0) {
+				// Choose console colours as required (much easier with RGB)
+				//CHAR_INFO c = GetColour(dp);
+				//triTransformed.col = c.Attributes;
+				//triTransformed.sym = c.Char.UnicodeChar;
 
+				// Convert World Space --> View Space
+				triViewed.p[0] = Matrix_MultiplyVector(matView, triTransformed.p[0]);
+				triViewed.p[1] = Matrix_MultiplyVector(matView, triTransformed.p[1]);
+				triViewed.p[2] = Matrix_MultiplyVector(matView, triTransformed.p[2]);
+				triViewed.sym = triTransformed.sym;
+				triViewed.col = triTransformed.col;
+				triViewed.t[0] = triTransformed.t[0];
+				triViewed.t[1] = triTransformed.t[1];
+				triViewed.t[2] = triTransformed.t[2];
 
-				crossProduct = normalize(crossProduct);
-			
-				float dot = dotProduct(light, crossProduct);
+				// Clip Viewed Triangle against near plane, this could form two additional
+				// additional triangles. 
 				int nClippedTriangles = 0;
-				Triangle clipped[2];
-				nClippedTriangles = clip({ 0,0,0.1 }, { 0,0,1 }, triTranslated, clipped[0], clipped[1]);
+				triangle clipped[2];
+				nClippedTriangles = Triangle_ClipAgainstPlane({ 0.0f, 0.0f, 0.1f }, { 0.0f, 0.0f, 1.0f }, triViewed, clipped[0], clipped[1]);
 
-				for (int i = 0; i < nClippedTriangles; i++) {
-					clipped[i].tex[0].w = 1.0f / clipped[i].p[0].z;
-					clipped[i].tex[0].u = clipped[i].tex[0].u * clipped[i].tex[0].w;
-					clipped[i].tex[0].v = clipped[i].tex[0].v * clipped[i].tex[0].w;
-
-					clipped[i].tex[1].w = 1.0f / clipped[i].p[1].z;
-					clipped[i].tex[1].u = clipped[i].tex[1].u * clipped[i].tex[1].w;
-					clipped[i].tex[1].v = clipped[i].tex[1].v * clipped[i].tex[1].w;
-
-					clipped[i].tex[2].w = 1.0f / clipped[i].p[2].z;
-					clipped[i].tex[2].u = clipped[i].tex[2].u * clipped[i].tex[2].w;
-					clipped[i].tex[2].v = clipped[i].tex[2].v * clipped[i].tex[2].w;
-
-
-					triProjected.tex[0] = clipped[i].tex[0];
-					triProjected.tex[1] = clipped[i].tex[1];
-					triProjected.tex[2] = clipped[i].tex[2];
+				// We may end up with multiple triangles form the clip, so project as
+				// required
+				for (int n = 0; n < nClippedTriangles; n++)
+				{
+					// Project triangles from 3D --> 2D
+					triProjected.p[0] = Matrix_MultiplyVector(matProj, clipped[n].p[0]);
+					triProjected.p[1] = Matrix_MultiplyVector(matProj, clipped[n].p[1]);
+					triProjected.p[2] = Matrix_MultiplyVector(matProj, clipped[n].p[2]);
+					triProjected.col = clipped[n].col;
+					triProjected.sym = clipped[n].sym;
+					triProjected.t[0] = clipped[n].t[0];
+					triProjected.t[1] = clipped[n].t[1];
+					triProjected.t[2] = clipped[n].t[2];
 
 
-					MultiplyMatrix(Projection, clipped[i].p[0], triProjected.p[0]);
-					MultiplyMatrix(Projection, clipped[i].p[1], triProjected.p[1]);
-					MultiplyMatrix(Projection, clipped[i].p[2], triProjected.p[2]);
+					triProjected.t[0].u = triProjected.t[0].u / triProjected.p[0].w;
+					triProjected.t[1].u = triProjected.t[1].u / triProjected.p[1].w;
+					triProjected.t[2].u = triProjected.t[2].u / triProjected.p[2].w;
 
-					for (int j = 0; j < 3; j++) {
-						if (triProjected.p[j].w != 0)
-						{
-							triProjected.p[j].x /= triProjected.p[j].w;
-							triProjected.p[j].y /= triProjected.p[j].w;
-							triProjected.p[j].z /= triProjected.p[j].w;
-						}
+					triProjected.t[0].v = triProjected.t[0].v / triProjected.p[0].w;
+					triProjected.t[1].v = triProjected.t[1].v / triProjected.p[1].w;
+					triProjected.t[2].v = triProjected.t[2].v / triProjected.p[2].w;
 
-					}
+					triProjected.t[0].w = 1.0f / triProjected.p[0].w;
+					triProjected.t[1].w = 1.0f / triProjected.p[1].w;
+					triProjected.t[2].w = 1.0f / triProjected.p[2].w;
 
-					float sizeX = 0.5f *  ScreenWidth();
-					float sizeY = 0.5f * ScreenHeight();
 
-					float offsetX = ScreenWidth() * 0.5f;
-					float offsetY = ScreenHeight() * 0.5f;
+					// Scale into view, we moved the normalising into cartesian space
+					// out of the matrix.vector function from the previous videos, so
+					// do this manually
+					triProjected.p[0] = Vector_Div(triProjected.p[0], triProjected.p[0].w);
+					triProjected.p[1] = Vector_Div(triProjected.p[1], triProjected.p[1].w);
+					triProjected.p[2] = Vector_Div(triProjected.p[2], triProjected.p[2].w);
 
-					triProjected.p[0].x *= sizeX; triProjected.p[0].y *= sizeY;
-					triProjected.p[1].x *= sizeX; triProjected.p[1].y *= sizeY;
-					triProjected.p[2].x *= sizeX; triProjected.p[2].y *= sizeY;
-				
-					triProjected.p[0].x += offsetX; triProjected.p[0].y += offsetY;
-					triProjected.p[1].x += offsetX; triProjected.p[1].y += offsetY;
-					triProjected.p[2].x += offsetX; triProjected.p[2].y += offsetY;
+					// X/Y are inverted so put them back
+				/*	triProjected.p[0].x *= -1.0f;
+					triProjected.p[1].x *= -1.0f;
+					triProjected.p[2].x *= -1.0f;
+					triProjected.p[0].y *= -1.0f;
+					triProjected.p[1].y *= -1.0f;
+					triProjected.p[2].y *= -1.0f;*/
 
-					trise.push_back({ triProjected, dot });
+					// Offset verts into visible normalised space
+					vec3d vOffsetView = { 1,1,0 };
+					triProjected.p[0] = Vector_Add(triProjected.p[0], vOffsetView);
+					triProjected.p[1] = Vector_Add(triProjected.p[1], vOffsetView);
+					triProjected.p[2] = Vector_Add(triProjected.p[2], vOffsetView);
+					triProjected.p[0].x *= 0.5f * (float)ScreenWidth();
+					triProjected.p[0].y *= 0.5f * (float)ScreenHeight();
+					triProjected.p[1].x *= 0.5f * (float)ScreenWidth();
+					triProjected.p[1].y *= 0.5f * (float)ScreenHeight();
+					triProjected.p[2].x *= 0.5f * (float)ScreenWidth();
+					triProjected.p[2].y *= 0.5f * (float)ScreenHeight();
 
+					// Store triangle for sorting
+					vecTrianglesToRaster.push_back(triProjected);
 				}
 			}
 		}
-		std::sort(trise.begin(), trise.end(), [](std::pair<Triangle, double> t1, std::pair<Triangle, double> t2) {return (float)(t2.first.p[0].z + t2.first.p[1].z + t2.first.p[2].z) / 3.0f < 
-			(float)(t1.first.p[0].z + t1.first.p[1].z + t1.first.p[2].z) / 3.0f;});
-		for (auto triToRaster : trise) {
-			Triangle clipped[2];
-			std::list<std::pair<Triangle, float>> listTriangles;
-			std::pair<Triangle, float> f = { triToRaster.first, triToRaster.second };
-			listTriangles.push_back(f);
+
+		// Sort triangles from back to front
+		/*sort(vecTrianglesToRaster.begin(), vecTrianglesToRaster.end(), [](triangle &t1, triangle &t2)
+		{
+			float z1 = (t1.p[0].z + t1.p[1].z + t1.p[2].z) / 3.0f;
+			float z2 = (t2.p[0].z + t2.p[1].z + t2.p[2].z) / 3.0f;
+			return z1 > z2;
+		});*/
+
+		// Clear Screen
+		olc::Pixel rgb;
+		//(0, 0, 0);
+		//Fill(0, 0, ScreenWidth(), ScreenHeight(), rgb);
+		Clear({0,0,0});
+		// Clear Depth Buffer
+		for (int i = 0; i < ScreenWidth() * ScreenHeight(); i++)
+			pDepthBuffer[i] = 0.0f;
+
+
+		// Loop through all transformed, viewed, projected, and sorted triangles
+		for (auto& triToRaster : vecTrianglesToRaster)
+		{
+			// Clip triangles against all four screen edges, this could yield
+			// a bunch of triangles, so create a queue that we traverse to 
+			//  ensure we only test new triangles generated against planes
+			triangle clipped[2];
+			list<triangle> listTriangles;
+
+			// Add initial triangle
+			listTriangles.push_back(triToRaster);
 			int nNewTriangles = 1;
 
 			for (int p = 0; p < 4; p++)
@@ -799,106 +815,79 @@ protected:
 				while (nNewTriangles > 0)
 				{
 					// Take triangle from front of queue
-					std::pair<Triangle,float> test = listTriangles.front();
+					triangle test = listTriangles.front();
 					listTriangles.pop_front();
 					nNewTriangles--;
 
+					// Clip it against a plane. We only need to test each 
+					// subsequent plane, against subsequent new triangles
+					// as all triangles after a plane clip are guaranteed
+					// to lie on the inside of the plane. I like how this
+					// comment is almost completely and utterly justified
 					switch (p)
 					{
-					case 0:	nTrisToAdd = clip({ 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, test.first, clipped[0], clipped[1]); break;
-				    case 1:	nTrisToAdd = clip({ 0.0f, (float)ScreenHeight() - 1, 0.0f }, { 0.0f, -1.0f, 0.0f }, test.first, clipped[0], clipped[1]); break;
-					case 2:	nTrisToAdd = clip({ 0.0f, 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f }, test.first, clipped[0], clipped[1]); break;
-					case 3:	nTrisToAdd = clip({ (float)ScreenWidth() - 1, 0.0f, 0.0f }, { -1.0f, 0.0f, 0.0f }, test.first, clipped[0], clipped[1]); break;
+					case 0:	nTrisToAdd = Triangle_ClipAgainstPlane({ 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, test, clipped[0], clipped[1]); break;
+					case 1:	nTrisToAdd = Triangle_ClipAgainstPlane({ 0.0f, (float)ScreenHeight() - 1, 0.0f }, { 0.0f, -1.0f, 0.0f }, test, clipped[0], clipped[1]); break;
+					case 2:	nTrisToAdd = Triangle_ClipAgainstPlane({ 0.0f, 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f }, test, clipped[0], clipped[1]); break;
+					case 3:	nTrisToAdd = Triangle_ClipAgainstPlane({ (float)ScreenWidth() - 1, 0.0f, 0.0f }, { -1.0f, 0.0f, 0.0f }, test, clipped[0], clipped[1]); break;
 					}
 
-					
+					// Clipping may yield a variable number of triangles, so
+					// add these new ones to the back of the queue for subsequent
+					// clipping against next planes
 					for (int w = 0; w < nTrisToAdd; w++)
-						listTriangles.push_back(std::pair<Triangle, float>{clipped[w], test.second});
+						listTriangles.push_back(clipped[w]);
 				}
 				nNewTriangles = listTriangles.size();
 			}
 
-			//pixel rgb;
-			////float dx = triToRaster.
-			//rgb.SetRGB(255, 255, 255);
-			//FillTriangle(triToRaster.first.p[0].x, triToRaster.first.p[0].y, triToRaster.first.p[1].x, triToRaster.first.p[1].y, triToRaster.first.p[2].x, triToRaster.first.p[2].y, rgb);
 
+			// Draw the transformed, viewed, clipped, projected, sorted, clipped triangles
+			for (auto& t : listTriangles)
+			{
+				TexturedTriangle(t.p[0].x, t.p[0].y, t.t[0].u, t.t[0].v, t.t[0].w,
+					t.p[1].x, t.p[1].y, t.t[1].u, t.t[1].v, t.t[1].w,
+					t.p[2].x, t.p[2].y, t.t[2].u, t.t[2].v, t.t[2].w, sprTex1);
 
-			if (!listTriangles.empty()) {
-		//		CHAR_INFO c = GetColor(triToRaster.second);
-
-				for (auto& h : listTriangles) {
-				//	auto v = triToRaster.first;
-					Triangle v = h.first;
-					pixel rgb;
-					//float dx = triToRaster.
-					//rgb.SetRGB(h.second * 255, h.second * 255, h.second * 255);
-				//	rgb.SetRGB(255, 255, 255);
-					//FillTriangle(v.p[0].x, v.p[0].y, v.p[1].x, v.p[1].y, v.p[2].x, v.p[2].y,rgb);
-					//DrawTriangle(v.p[0].x, v.p[0].y, v.p[1].x, v.p[1].y, v.p[2].x, v.p[2].y, rgb);
-
-					DrawTexturedTriangle(spr,v.p[0].x, v.p[0].y, v.tex[0].u, v.tex[0].v, v.tex[0].w,
-											  v.p[1].x, v.p[1].y, v.tex[1].u, v.tex[1].v, v.tex[1].w,
-											  v.p[2].x, v.p[2].y, v.tex[2].u, v.tex[2].v, v.tex[2].w);
-									
-				/*	TexturedTriangle(v.p[0].x, v.p[0].y, v.tex[0].u, v.tex[0].v, v.tex[0].w,
-						v.p[1].x, v.p[1].y, v.tex[1].u, v.tex[1].v, v.tex[1].w,
-						v.p[2].x, v.p[2].y, v.tex[2].u, v.tex[2].v, v.tex[2].w,&spr);*/
-
-				//	DrawTriangle(v.p[0].x, v.p[0].y, v.p[1].x, v.p[1].y, v.p[2].x, v.p[2].y, c.Char.UnicodeChar, c.Attributes);
-
-				
-				}
+				//FillTriangle(t.p[0].x, t.p[0].y, t.p[1].x, t.p[1].y, t.p[2].x, t.p[2].y, t.sym, t.col);
+			//	DrawTriangle(t.p[0].x, t.p[0].y, t.p[1].x, t.p[1].y, t.p[2].x, t.p[2].y, PIXEL_SOLID, FG_WHITE);
 			}
-
-
-
 		}
-		//for (int i = 0; i < ScreenHeight(); i++) {
-		//	for (int j = 0; j < ScreenWidth(); j++) {
-		//		DrawPixel(j, i, spr.GetSamplePixel(j / (float)ScreenWidth(), i / (float)ScreenHeight()));
-		//			//spr.GetSampleColor(j / (float)ScreenWidth(), i / (float)ScreenHeight()));
-		//	}
-		//}
-		//DrawLine(5, 11, 13, 40);
 
 
-		//for(int i = 0; i < ScreenHeight(); i++)
-		//	for (int j = 0; j < ScreenWidth(); j++) {
-		//		DrawPixel(j, i, screenBuffer[i * ScreenWidth() + j]);
-		//	}
 		return true;
 	}
+
 	void TexturedTriangle(int x1, int y1, float u1, float v1, float w1,
 		int x2, int y2, float u2, float v2, float w2,
 		int x3, int y3, float u3, float v3, float w3,
-		sprite* tex)
+		olc::Sprite* tex)
 	{
 		if (y2 < y1)
 		{
-			std::swap(y1, y2);
-			std::swap(x1, x2);
-			std::swap(u1, u2);
-			std::swap(v1, v2);
-			std::swap(w1, w2);
+			swap(y1, y2);
+			swap(x1, x2);
+			swap(u1, u2);
+			swap(v1, v2);
+			swap(w1, w2);
 		}
 
 		if (y3 < y1)
 		{
-			std::swap(y1, y3);
-			std::swap(x1, x3);
-			std::swap(u1, u3);
-			std::swap(v1, v3);
-			std::swap(w1, w3);
+			swap(y1, y3);
+			swap(x1, x3);
+			swap(u1, u3);
+			swap(v1, v3);
+			swap(w1, w3);
 		}
 
 		if (y3 < y2)
 		{
-			std::swap(y2, y3);
-			std::swap(x2, x3);
-			std::swap(u2, u3);
-			std::swap(v2, v3);
-			std::swap(w2, w3);
+			swap(y2, y3);
+			swap(x2, x3);
+			swap(u2, u3);
+			swap(v2, v3);
+			swap(w2, w3);
 		}
 
 		int dy1 = y2 - y1;
@@ -948,10 +937,10 @@ protected:
 
 				if (ax > bx)
 				{
-					std::swap(ax, bx);
-					std::swap(tex_su, tex_eu);
-					std::swap(tex_sv, tex_ev);
-					std::swap(tex_sw, tex_ew);
+					swap(ax, bx);
+					swap(tex_su, tex_eu);
+					swap(tex_sv, tex_ev);
+					swap(tex_sw, tex_ew);
 				}
 
 				tex_u = tex_su;
@@ -966,7 +955,11 @@ protected:
 					tex_u = (1.0f - t) * tex_su + t * tex_eu;
 					tex_v = (1.0f - t) * tex_sv + t * tex_ev;
 					tex_w = (1.0f - t) * tex_sw + t * tex_ew;
-					DrawPixel(j, i, tex->GetSamplePixel(tex_u / tex_w, tex_v / tex_w));
+					if (tex_w > pDepthBuffer[i * ScreenWidth() + j])
+					{
+						Draw(j, i,tex->Sample(tex_u / tex_w, tex_v / tex_w));
+						pDepthBuffer[i * ScreenWidth() + j] = tex_w;
+					}
 					t += tstep;
 				}
 
@@ -1004,10 +997,10 @@ protected:
 
 				if (ax > bx)
 				{
-					std::swap(ax, bx);
-					std::swap(tex_su, tex_eu);
-					std::swap(tex_sv, tex_ev);
-					std::swap(tex_sw, tex_ew);
+					swap(ax, bx);
+					swap(tex_su, tex_eu);
+					swap(tex_sv, tex_ev);
+					swap(tex_sw, tex_ew);
 				}
 
 				tex_u = tex_su;
@@ -1023,10 +1016,11 @@ protected:
 					tex_v = (1.0f - t) * tex_sv + t * tex_ev;
 					tex_w = (1.0f - t) * tex_sw + t * tex_ew;
 
-					
-						DrawPixel(j, i, tex->GetSamplePixel(tex_u / tex_w, tex_v / tex_w));
-					//	pDepthBuffer[i * ScreenWidth() + j] = tex_w;
-					
+					if (tex_w > pDepthBuffer[i * ScreenWidth() + j])
+					{
+						Draw(j, i, tex->Sample(tex_u / tex_w, tex_v / tex_w));
+						pDepthBuffer[i * ScreenWidth() + j] = tex_w;
+					}
 					t += tstep;
 				}
 			}
@@ -1034,16 +1028,15 @@ protected:
 	}
 
 
-
-
 };
 
 
 
-int main() {
 
-	Graphics3D d;
-	d.ConstructPixel(250 * 4, 150 * 4, 0, 0,1,1, L"hello");
-	//d.ConstructConsole(250, 150, 4, 4);
-	d.run();
+int main()
+{
+	olcEngine3D demo;
+	demo.Construct(256, 169,4, 4);
+	demo.Start();
+	return 0;
 }
