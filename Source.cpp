@@ -13,7 +13,8 @@ private:
 	float fRad = 1.0f / tanf((float)fov * 0.5f / 180.0f * 3.14159f);
 	float Zfar = 1000;
 	float Znear = 0.1f;
-	
+	pixel *screenBuffer;
+	float *depth;
 	
 	float yaw =  0;
 	struct Matrix {
@@ -127,8 +128,8 @@ private:
 						vec2d v;
 						s >> junk >> junk >> v.v >> v.u;
 						// A little hack for the spyro texture
-						//v.u = 1.0f - v.u;
-						//v.v = 1.0f - v.v;
+						v.u = 1.0f - v.u;
+						v.v = 1.0f - v.v;
 						texs.push_back(v);
 					}
 					else
@@ -409,7 +410,12 @@ protected:
 						float jz1 = tex_z1 + t * (tex_z2 - tex_z1);
 						ju1 /= jz1;
 						jv1 /= jz1;
-						DrawPixel(j, i, spr.GetSamplePixel(ju1, jv1));//spr.GetSampleGlyph(ju1,jv1), spr.GetSampleColor(ju1,jv1));
+						DrawPixel(j, i, spr.GetSamplePixel(jv1, ju1));//spr.GetSampleGlyph(ju1,jv1), spr.GetSampleColor(ju1,jv1));
+						//if (depth[i * ScreenWidth() + j] > jz1) {
+						//	//DrawPixel(j, i, spr.GetSamplePixel(ju1, jv1));//spr.GetSampleGlyph(ju1, jv1), spr.GetSampleColor(ju1, jv1));
+						//	screenBuffer[i * ScreenWidth() + j] = spr.GetSamplePixel(ju1, jv1);
+						//	depth[i * ScreenWidth() + j] = jz1;
+						//}
 				     }
 			
 			}
@@ -457,7 +463,12 @@ protected:
 					float jz1 = tex_z1 + t * (tex_z2 - tex_z1);
 					ju1 /= jz1;
 					jv1 /= jz1;
-					DrawPixel(j, i, spr.GetSamplePixel(ju1, jv1));//spr.GetSampleGlyph(ju1, jv1), spr.GetSampleColor(ju1, jv1));
+					jz1 = 1.0f / jz1;
+						DrawPixel(j, i, spr.GetSamplePixel(jv1, ju1));//spr.GetSampleGlyph(ju1, jv1), spr.GetSampleColor(ju1, jv1));
+					/*if (depth[i * ScreenWidth() + j] > jz1) {
+						screenBuffer[i * ScreenWidth() + j] = spr.GetSamplePixel(ju1, jv1);
+						depth[i * ScreenWidth() + j] = jz1;
+					}*/
 				}
 
 			}
@@ -527,6 +538,9 @@ protected:
 		if (x == false)
 			std::cout << "error";
 		//spr.Resize(20, 32)
+		screenBuffer = new pixel[ScreenWidth() * ScreenHeight()];
+		depth = new float[ScreenWidth() * ScreenHeight()];
+		
 		return true;
 	}
 	void MultiplyMatrix(const Matrix &matrix,const vec3d point, vec3d& Output) {
@@ -576,6 +590,10 @@ protected:
 		Fill(0, 0, ScreenWidth(), ScreenHeight(),rgb);
 		
 		//theata += fElapseTime;
+		for (int i = 0; i < ScreenWidth() * ScreenHeight(); i++) {
+			screenBuffer[i].SetRGB(0, 0, 0);
+			depth[i] = INFINITY;
+		}
 
 
 		RotationZ.i[0] = cosf(theata);
@@ -742,6 +760,7 @@ protected:
 						{
 							triProjected.p[j].x /= triProjected.p[j].w;
 							triProjected.p[j].y /= triProjected.p[j].w;
+							triProjected.p[j].z /= triProjected.p[j].w;
 						}
 
 					}
@@ -822,7 +841,10 @@ protected:
 											  v.p[1].x, v.p[1].y, v.tex[1].u, v.tex[1].v, v.tex[1].w,
 											  v.p[2].x, v.p[2].y, v.tex[2].u, v.tex[2].v, v.tex[2].w);
 									
-				
+				/*	TexturedTriangle(v.p[0].x, v.p[0].y, v.tex[0].u, v.tex[0].v, v.tex[0].w,
+						v.p[1].x, v.p[1].y, v.tex[1].u, v.tex[1].v, v.tex[1].w,
+						v.p[2].x, v.p[2].y, v.tex[2].u, v.tex[2].v, v.tex[2].w,&spr);*/
+
 				//	DrawTriangle(v.p[0].x, v.p[0].y, v.p[1].x, v.p[1].y, v.p[2].x, v.p[2].y, c.Char.UnicodeChar, c.Attributes);
 
 				
@@ -832,16 +854,186 @@ protected:
 
 
 		}
-		for (int i = 0; i < ScreenHeight(); i++) {
-			for (int j = 0; j < ScreenWidth(); j++) {
-				DrawPixel(j, i, spr.GetSamplePixel(j / (float)ScreenWidth(), i / (float)ScreenHeight()));
-					//spr.GetSampleColor(j / (float)ScreenWidth(), i / (float)ScreenHeight()));
-			}
-		}
+		//for (int i = 0; i < ScreenHeight(); i++) {
+		//	for (int j = 0; j < ScreenWidth(); j++) {
+		//		DrawPixel(j, i, spr.GetSamplePixel(j / (float)ScreenWidth(), i / (float)ScreenHeight()));
+		//			//spr.GetSampleColor(j / (float)ScreenWidth(), i / (float)ScreenHeight()));
+		//	}
+		//}
 		//DrawLine(5, 11, 13, 40);
+
+
+		//for(int i = 0; i < ScreenHeight(); i++)
+		//	for (int j = 0; j < ScreenWidth(); j++) {
+		//		DrawPixel(j, i, screenBuffer[i * ScreenWidth() + j]);
+		//	}
 		return true;
 	}
-	
+	void TexturedTriangle(int x1, int y1, float u1, float v1, float w1,
+		int x2, int y2, float u2, float v2, float w2,
+		int x3, int y3, float u3, float v3, float w3,
+		sprite* tex)
+	{
+		if (y2 < y1)
+		{
+			std::swap(y1, y2);
+			std::swap(x1, x2);
+			std::swap(u1, u2);
+			std::swap(v1, v2);
+			std::swap(w1, w2);
+		}
+
+		if (y3 < y1)
+		{
+			std::swap(y1, y3);
+			std::swap(x1, x3);
+			std::swap(u1, u3);
+			std::swap(v1, v3);
+			std::swap(w1, w3);
+		}
+
+		if (y3 < y2)
+		{
+			std::swap(y2, y3);
+			std::swap(x2, x3);
+			std::swap(u2, u3);
+			std::swap(v2, v3);
+			std::swap(w2, w3);
+		}
+
+		int dy1 = y2 - y1;
+		int dx1 = x2 - x1;
+		float dv1 = v2 - v1;
+		float du1 = u2 - u1;
+		float dw1 = w2 - w1;
+
+		int dy2 = y3 - y1;
+		int dx2 = x3 - x1;
+		float dv2 = v3 - v1;
+		float du2 = u3 - u1;
+		float dw2 = w3 - w1;
+
+		float tex_u, tex_v, tex_w;
+
+		float dax_step = 0, dbx_step = 0,
+			du1_step = 0, dv1_step = 0,
+			du2_step = 0, dv2_step = 0,
+			dw1_step = 0, dw2_step = 0;
+
+		if (dy1) dax_step = dx1 / (float)abs(dy1);
+		if (dy2) dbx_step = dx2 / (float)abs(dy2);
+
+		if (dy1) du1_step = du1 / (float)abs(dy1);
+		if (dy1) dv1_step = dv1 / (float)abs(dy1);
+		if (dy1) dw1_step = dw1 / (float)abs(dy1);
+
+		if (dy2) du2_step = du2 / (float)abs(dy2);
+		if (dy2) dv2_step = dv2 / (float)abs(dy2);
+		if (dy2) dw2_step = dw2 / (float)abs(dy2);
+
+		if (dy1)
+		{
+			for (int i = y1; i <= y2; i++)
+			{
+				int ax = x1 + (float)(i - y1) * dax_step;
+				int bx = x1 + (float)(i - y1) * dbx_step;
+
+				float tex_su = u1 + (float)(i - y1) * du1_step;
+				float tex_sv = v1 + (float)(i - y1) * dv1_step;
+				float tex_sw = w1 + (float)(i - y1) * dw1_step;
+
+				float tex_eu = u1 + (float)(i - y1) * du2_step;
+				float tex_ev = v1 + (float)(i - y1) * dv2_step;
+				float tex_ew = w1 + (float)(i - y1) * dw2_step;
+
+				if (ax > bx)
+				{
+					std::swap(ax, bx);
+					std::swap(tex_su, tex_eu);
+					std::swap(tex_sv, tex_ev);
+					std::swap(tex_sw, tex_ew);
+				}
+
+				tex_u = tex_su;
+				tex_v = tex_sv;
+				tex_w = tex_sw;
+
+				float tstep = 1.0f / ((float)(bx - ax));
+				float t = 0.0f;
+
+				for (int j = ax; j < bx; j++)
+				{
+					tex_u = (1.0f - t) * tex_su + t * tex_eu;
+					tex_v = (1.0f - t) * tex_sv + t * tex_ev;
+					tex_w = (1.0f - t) * tex_sw + t * tex_ew;
+					DrawPixel(j, i, tex->GetSamplePixel(tex_u / tex_w, tex_v / tex_w));
+					t += tstep;
+				}
+
+			}
+		}
+
+		dy1 = y3 - y2;
+		dx1 = x3 - x2;
+		dv1 = v3 - v2;
+		du1 = u3 - u2;
+		dw1 = w3 - w2;
+
+		if (dy1) dax_step = dx1 / (float)abs(dy1);
+		if (dy2) dbx_step = dx2 / (float)abs(dy2);
+
+		du1_step = 0, dv1_step = 0;
+		if (dy1) du1_step = du1 / (float)abs(dy1);
+		if (dy1) dv1_step = dv1 / (float)abs(dy1);
+		if (dy1) dw1_step = dw1 / (float)abs(dy1);
+
+		if (dy1)
+		{
+			for (int i = y2; i <= y3; i++)
+			{
+				int ax = x2 + (float)(i - y2) * dax_step;
+				int bx = x1 + (float)(i - y1) * dbx_step;
+
+				float tex_su = u2 + (float)(i - y2) * du1_step;
+				float tex_sv = v2 + (float)(i - y2) * dv1_step;
+				float tex_sw = w2 + (float)(i - y2) * dw1_step;
+
+				float tex_eu = u1 + (float)(i - y1) * du2_step;
+				float tex_ev = v1 + (float)(i - y1) * dv2_step;
+				float tex_ew = w1 + (float)(i - y1) * dw2_step;
+
+				if (ax > bx)
+				{
+					std::swap(ax, bx);
+					std::swap(tex_su, tex_eu);
+					std::swap(tex_sv, tex_ev);
+					std::swap(tex_sw, tex_ew);
+				}
+
+				tex_u = tex_su;
+				tex_v = tex_sv;
+				tex_w = tex_sw;
+
+				float tstep = 1.0f / ((float)(bx - ax));
+				float t = 0.0f;
+
+				for (int j = ax; j < bx; j++)
+				{
+					tex_u = (1.0f - t) * tex_su + t * tex_eu;
+					tex_v = (1.0f - t) * tex_sv + t * tex_ev;
+					tex_w = (1.0f - t) * tex_sw + t * tex_ew;
+
+					
+						DrawPixel(j, i, tex->GetSamplePixel(tex_u / tex_w, tex_v / tex_w));
+					//	pDepthBuffer[i * ScreenWidth() + j] = tex_w;
+					
+					t += tstep;
+				}
+			}
+		}
+	}
+
+
 
 
 };
@@ -851,7 +1043,7 @@ protected:
 int main() {
 
 	Graphics3D d;
-	d.ConstructPixel(250 * 1, 150 * 1, 0, 0,4,4, L"hello");
+	d.ConstructPixel(250 * 4, 150 * 4, 0, 0,1,1, L"hello");
 	//d.ConstructConsole(250, 150, 4, 4);
 	d.run();
 }
