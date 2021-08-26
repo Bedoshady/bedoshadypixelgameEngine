@@ -55,7 +55,7 @@ Last Updated: 01/09/2018
 // downloaded the "Jario.spr" file from
 #define OLC_PGE_APPLICATION
 
-#include "bedoPixelGameEngine.h"
+#include "OlcPixelGameEngine.h"
 #include <fstream>
 #include <strstream>
 #include <algorithm>
